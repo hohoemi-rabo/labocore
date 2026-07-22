@@ -6,4 +6,17 @@ export const formatTimeRange = (start: string, end: string) =>
   `${start.slice(0, 5)}–${end.slice(0, 5)}`;
 
 // 金額を日本円表記に（DESIGN §2: カンマ区切りは toLocaleString('ja-JP')）。
+// ¥ を数字より小さく muted に見せたい表示箇所では <Yen> コンポーネントを使う。
 export const formatYen = (amount: number) => `¥${amount.toLocaleString("ja-JP")}`;
+
+// "2026-07" → "2026年7月"
+export const formatMonthJa = (ym: string) => {
+  const [y, m] = ym.split("-");
+  return `${y}年${Number(m)}月`;
+};
+
+// "1950-03-15" → "1950年3月15日"
+export const formatDateJa = (date: string) => {
+  const [y, m, d] = date.split("-");
+  return `${y}年${Number(m)}月${Number(d)}日`;
+};

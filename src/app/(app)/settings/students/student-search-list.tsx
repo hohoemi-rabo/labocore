@@ -38,9 +38,10 @@ export function StudentSearchList({ students }: { students: StudentRow[] }) {
       {filtered.length > 0 ? (
         <div className="overflow-hidden rounded-lg border border-hairline bg-canvas">
           {filtered.map((s, i) => (
-            <div
+            <Link
               key={s.id}
-              className={`flex min-h-[64px] items-center justify-between gap-4 px-5 ${
+              href={`/settings/students/${s.id}`}
+              className={`flex min-h-[64px] items-center justify-between gap-4 px-5 transition-colors hover:bg-canvas-parchment ${
                 i > 0 ? "border-t border-divider-soft" : ""
               }`}
             >
@@ -54,13 +55,10 @@ export function StudentSearchList({ students }: { students: StudentRow[] }) {
                   {formatYen(s.unitPrice)}
                 </span>
               </div>
-              <Link
-                href={`/settings/students/${s.id}/edit`}
-                className="shrink-0 text-[17px] font-semibold text-primary transition-transform active:scale-95"
-              >
-                編集
-              </Link>
-            </div>
+              <span aria-hidden className="shrink-0 text-ink-muted-48">
+                ›
+              </span>
+            </Link>
           ))}
         </div>
       ) : (
