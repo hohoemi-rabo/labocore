@@ -9,13 +9,13 @@
 
 ## Todo
 
-- [ ] ルートグループを構成する: `(auth)/login` と `(app)/`（認証必須側に共通レイアウトを適用）
-- [ ] PC: 最上部に高さ44pxの純黒（#000000）バーを固定し、左に「LaboCore」ワードマーク（Inter 600 / tracking -0.02em ベース、バー内は 12px/400/白で静かに）。純黒はここ以外で使わない
-- [ ] PC: サイドバーナビ（今日 / カレンダー / 集計 / 設定）。アクティブ項目のみ Action Blue
-- [ ] モバイル: 下部タブバー（今日 / カレンダー / 集計 / 設定）。`bg-canvas-parchment/80 + backdrop-blur` のフロストガラス、アクティブタブのみ Action Blue
-- [ ] 設定ハブページ `/settings` を作成する: 生徒管理・コマ管理・休講日管理へのリンク（白カード+hairline+18px角丸のリスト）とログアウト
-- [ ] コンテンツコンテナを用意する: 一覧・集計系は最大幅 980px センター寄せ
-- [ ] 各画面のプレースホルダページを作成しナビゲーションが全て機能する状態にする: `/`（今日）, `/calendar`, `/summary`, `/settings/students`, `/settings/classes`, `/settings/closed-days`
+- [x] ルートグループを構成する: `(auth)/login` と `(app)/`（認証必須側に共通レイアウトを適用）
+- [x] PC: 最上部に高さ44pxの純黒（#000000）バーを固定し、左に「LaboCore」ワードマーク（Inter 600 / tracking -0.02em ベース、バー内は 12px/400/白で静かに）。純黒はここ以外で使わない
+- [x] PC: サイドバーナビ（今日 / カレンダー / 集計 / 設定）。アクティブ項目のみ Action Blue
+- [x] モバイル: 下部タブバー（今日 / カレンダー / 集計 / 設定）。`bg-canvas-parchment/80 + backdrop-blur` のフロストガラス、アクティブタブのみ Action Blue
+- [x] 設定ハブページ `/settings` を作成する: 生徒管理・コマ管理・休講日管理へのリンク（白カード+hairline+18px角丸のリスト）とログアウト
+- [x] コンテンツコンテナを用意する: 一覧・集計系は最大幅 980px センター寄せ
+- [x] 各画面のプレースホルダページを作成しナビゲーションが全て機能する状態にする: `/`（今日）, `/calendar`, `/summary`, `/settings/students`, `/settings/classes`, `/settings/closed-days`
 
 ## 完了条件
 
