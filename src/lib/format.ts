@@ -20,3 +20,10 @@ export const formatDateJa = (date: string) => {
   const [y, m, d] = date.split("-");
   return `${y}年${Number(m)}月${Number(d)}日`;
 };
+
+// JST の今日を "YYYY-MM-DD" で返す。過去/今後判定・当日判定に使う。
+// sv-SE ロケールは ISO 形式（YYYY-MM-DD）を返す。
+export const todayJst = () =>
+  new Intl.DateTimeFormat("sv-SE", { timeZone: "Asia/Tokyo" }).format(
+    new Date(),
+  );
