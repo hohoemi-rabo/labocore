@@ -27,3 +27,15 @@ export const todayJst = () =>
   new Intl.DateTimeFormat("sv-SE", { timeZone: "Asia/Tokyo" }).format(
     new Date(),
   );
+
+// "YYYY-MM-DD" の曜日番号(0=日〜6=土)。カレンダー日付なので UTC 基準で tz 非依存に算出。
+export const weekdayOf = (date: string) => {
+  const [y, m, d] = date.split("-").map(Number);
+  return new Date(Date.UTC(y, m - 1, d)).getUTCDay();
+};
+
+// "2026-07-22" → "7月22日（水）"
+export const formatDateWithWeekday = (date: string) => {
+  const [, m, d] = date.split("-").map(Number);
+  return `${m}月${d}日（${WEEKDAY_LABELS[weekdayOf(date)]}）`;
+};
