@@ -2,16 +2,14 @@
 
 import { useOptimistic, useTransition } from "react";
 import { useToast, Toast } from "@/components/toast";
+import type {
+  AttendanceStatus,
+  AttendanceRow,
+  AttendanceCandidate,
+} from "@/lib/attendance";
 import { recordAttendance } from "./actions";
-import { AttendanceToggle, type AttendanceStatus } from "./attendance-toggle";
-import { AddStudent, type Candidate } from "./add-student";
-
-export type AttendanceRow = {
-  studentId: string;
-  name: string;
-  subLabel: string | null; // 別コマの生徒（別の日追加）だけコマ名を入れて区別する
-  status: AttendanceStatus;
-};
+import { AttendanceToggle } from "./attendance-toggle";
+import { AddStudent } from "./add-student";
 
 type OptimisticUpdate = {
   studentId: string;
@@ -40,10 +38,14 @@ export function AttendanceBoard({
   lessonDate,
   initialRows,
   candidates,
+  doneLabel = "本日の記録完了",
+  addLabel,
 }: {
   lessonDate: string;
   initialRows: AttendanceRow[];
-  candidates: Candidate[];
+  candidates: AttendanceCandidate[];
+  doneLabel?: string;
+  addLabel?: string;
 }) {
   const { message, showToast } = useToast();
   const [isPending, startTransition] = useTransition();
@@ -115,12 +117,13 @@ export function AttendanceBoard({
       {allRecorded && (
         <div className="flex items-center justify-center gap-2 text-[15px] font-semibold text-primary">
           <DoneIcon />
-          本日の記録完了
+          {doneLabel}
         </div>
       )}
 
       <AddStudent
         candidates={pickable}
+        label={addLabel}
         onAdd={(c) =>
           setStatus(
             {

@@ -2,21 +2,17 @@
 
 import { useState } from "react";
 import { inputClass } from "@/components/ui/form";
+import type { AttendanceCandidate } from "@/lib/attendance";
 
-export type Candidate = {
-  id: string;
-  name: string;
-  kana: string;
-  className: string | null;
-};
-
-// イレギュラー対応: 別の日に来た生徒を本日の出席として追加する（他コマの生徒も対象）。
+// イレギュラー対応: 別の日に来た生徒をその日の出席として追加する（他コマの生徒も対象）。
 export function AddStudent({
   candidates,
   onAdd,
+  label = "別の日に来た生徒を追加",
 }: {
-  candidates: Candidate[];
-  onAdd: (candidate: Candidate) => void;
+  candidates: AttendanceCandidate[];
+  onAdd: (candidate: AttendanceCandidate) => void;
+  label?: string;
 }) {
   const [open, setOpen] = useState(false);
   const [query, setQuery] = useState("");
@@ -33,7 +29,7 @@ export function AddStudent({
         onClick={() => setOpen(true)}
         className="flex h-11 items-center justify-center self-start rounded-pill border border-hairline bg-canvas px-6 text-[17px] font-semibold text-ink transition-transform active:scale-95"
       >
-        別の日に来た生徒を追加
+        {label}
       </button>
     );
   }

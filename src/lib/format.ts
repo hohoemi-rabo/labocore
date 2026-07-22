@@ -15,6 +15,13 @@ export const formatMonthJa = (ym: string) => {
   return `${y}年${Number(m)}月`;
 };
 
+// "2026-07" を delta ヶ月ずらす。カレンダー月なので UTC 基準で算出。
+export const shiftMonth = (month: string, delta: number) => {
+  const [y, m] = month.split("-").map(Number);
+  const d = new Date(Date.UTC(y, m - 1 + delta, 1));
+  return `${d.getUTCFullYear()}-${String(d.getUTCMonth() + 1).padStart(2, "0")}`;
+};
+
 // "1950-03-15" → "1950年3月15日"
 export const formatDateJa = (date: string) => {
   const [y, m, d] = date.split("-");

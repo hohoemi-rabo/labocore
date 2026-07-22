@@ -1,6 +1,6 @@
 "use client";
 
-export type AttendanceStatus = "present" | "absent" | null;
+import type { AttendanceStatus } from "@/lib/attendance";
 
 // 出席のチェックアイコン（絵文字ではなく 1px ストロークの SVG）。
 function CheckIcon() {
