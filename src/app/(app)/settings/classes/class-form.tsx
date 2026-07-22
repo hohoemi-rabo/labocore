@@ -2,12 +2,8 @@
 
 import { useActionState } from "react";
 import { WEEKDAY_LABELS } from "@/lib/format";
+import { labelClass, inputClass, errorClass } from "@/components/ui/form";
 import type { ClassFormState } from "./actions";
-
-const labelClass = "text-[14px] font-semibold text-ink";
-const inputClass =
-  "h-11 rounded-pill border border-hairline bg-canvas px-5 text-[17px] text-ink outline-none focus:ring-2 focus:ring-primary-focus";
-const errorClass = "text-[14px] font-semibold text-ink";
 
 type Action = (
   prevState: ClassFormState,
