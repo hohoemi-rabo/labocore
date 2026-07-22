@@ -9,13 +9,13 @@ DESIGN.md のデザインシステムを Tailwind v3 の設定に落とし込み
 
 ## Todo
 
-- [ ] `tailwind.config.ts` の `theme.extend.colors` に DESIGN.md §1 のカラートークンを全て登録する（primary / primary-focus / primary-on-dark / ink / ink-muted-80 / ink-muted-48 / body-muted / hairline / divider-soft / canvas / canvas-parchment / surface-pearl / surface-tile-1 / surface-tile-2 / surface-black / on-dark）
-- [ ] `theme.extend.borderRadius` に3値のみ登録する（8px / 18px / pill=9999px）。中間値を追加しない
-- [ ] `next/font` で Inter（欧文・数字）+ Noto Sans JP（和文）を読み込み、`layout.tsx` に適用する。フォールバックは DESIGN.md §2 のフォントスタック
-- [ ] `globals.css` を整理する: 本文 17px / line-height 1.47、antialiased、背景 canvas。scaffold の Geist 変数・ダークモード用 CSS 変数を削除
-- [ ] scaffold の `page.tsx` デフォルト内容と不要な public アセット（`vercel.svg` 等）を削除し、仮のホームページに置き換える
-- [ ] `layout.tsx` の metadata を設定する（`title: 'LaboCore'`、`<html lang="ja">`）
-- [ ] `npm run lint` と `npm run build` が通ることを確認する
+- [x] `tailwind.config.ts` の `theme.extend.colors` に DESIGN.md §1 のカラートークンを全て登録する（primary / primary-focus / primary-on-dark / ink / ink-muted-80 / ink-muted-48 / body-muted / hairline / divider-soft / canvas / canvas-parchment / surface-pearl / surface-tile-1 / surface-tile-2 / surface-black / on-dark）
+- [x] `theme.extend.borderRadius` に3値のみ登録する（8px / 18px / pill=9999px）。中間値を追加しない
+- [x] `next/font` で Inter（欧文・数字）+ Noto Sans JP（和文）を読み込み、`layout.tsx` に適用する。フォールバックは DESIGN.md §2 のフォントスタック
+- [x] `globals.css` を整理する: 本文 17px / line-height 1.47、antialiased、背景 canvas。scaffold の Geist 変数・ダークモード用 CSS 変数を削除
+- [x] scaffold の `page.tsx` デフォルト内容と不要な public アセット（`vercel.svg` 等）を削除し、仮のホームページに置き換える
+- [x] `layout.tsx` の metadata を設定する（`title: 'LaboCore'`、`<html lang="ja">`）
+- [x] `npm run lint` と `npm run build` が通ることを確認する
 
 ## 完了条件
 
