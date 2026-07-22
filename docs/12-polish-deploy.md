@@ -14,7 +14,7 @@
 - [x] README.md をプロジェクト用に書き換える（概要 / 主な機能 / セットアップ / 環境変数 / 管理者ユーザー作成手順 / Vercel デプロイ）
 - [x] Supabase advisors（security / performance）の最終確認。RLS が全テーブルで有効であること（performance 指摘ゼロ、security は「漏洩パスワード保護 無効」の WARN 1件＝Dashboard 設定。全5テーブル RLS 有効・`(select auth.uid())` パターン確認済み。集計用に `idx_payments_target_month` を追加）
 - [ ] レスポンシブ最終確認: 375px（スマホ）とPC幅で全8画面を実機/DevTools で目視確認。タップ要素が最小 44×44px を満たすこと（コード上は `h-11`/`min-h-[44px]`/セル `min-h-[56px]` で担保済み。目視は運用者作業）
-- [ ] Vercel にデプロイし、環境変数（`NEXT_PUBLIC_SUPABASE_URL` / `NEXT_PUBLIC_SUPABASE_ANON_KEY`）を設定する（手順は README「デプロイ（Vercel）」。運用者作業）
+- [x] Vercel にデプロイし、環境変数（`NEXT_PUBLIC_SUPABASE_URL` / `NEXT_PUBLIC_SUPABASE_ANON_KEY`）を設定する（GitHub 連携で本番デプロイ済み。以後 `main` push で自動デプロイ）
 - [ ] 本番環境でログイン〜出欠記録〜月次集計の一連の流れをスマホ実機で確認する（運用者作業）
 - [ ] 漏洩パスワード保護を Supabase Dashboard で有効化する（Authentication → Passwords）
 
