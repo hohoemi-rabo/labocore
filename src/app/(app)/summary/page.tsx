@@ -23,17 +23,21 @@ export default async function SummaryPage({
 
   const supabase = await createClient();
 
-  const [{ data: records }, { data: payments }] = await Promise.all([
-    supabase
-      .from("attendance_records")
-      .select("student_id, status, unit_price_at_time")
-      .gte("lesson_date", monthStart)
-      .lt("lesson_date", nextStart),
-    supabase
-      .from("payments")
-      .select("student_id, is_paid")
-      .eq("target_month", month),
-  ]);
+  // 生徒名は集約結果に依存させず並列で取得する（10〜30名規模なので全件で良い）。
+  // is_active で絞らない＝当月に記録がある退会者も表示対象に含める。
+  const [{ data: records }, { data: payments }, { data: students }] =
+    await Promise.all([
+      supabase
+        .from("attendance_records")
+        .select("student_id, status, unit_price_at_time")
+        .gte("lesson_date", monthStart)
+        .lt("lesson_date", nextStart),
+      supabase
+        .from("payments")
+        .select("student_id, is_paid")
+        .eq("target_month", month),
+      supabase.from("students").select("id, name, kana"),
+    ]);
 
   // 生徒ごとに集約（請求額 = present の unit_price_at_time 合計 = 単価スナップショット）。
   const byStudent = new Map<string, Agg>();
@@ -54,17 +58,9 @@ export default async function SummaryPage({
 
   const studentIds = [...byStudent.keys()];
 
-  // 対象は当月に記録がある生徒（退会者含む）。名前・ふりがなを引く（is_active で絞らない）。
-  const studentById = new Map<string, { name: string; kana: string }>();
-  if (studentIds.length > 0) {
-    const { data: students } = await supabase
-      .from("students")
-      .select("id, name, kana")
-      .in("id", studentIds);
-    for (const s of students ?? []) {
-      studentById.set(s.id, { name: s.name, kana: s.kana });
-    }
-  }
+  const studentById = new Map(
+    (students ?? []).map((s) => [s.id, { name: s.name, kana: s.kana }]),
+  );
 
   const paidById = new Map<string, boolean>();
   for (const p of payments ?? []) {
@@ -96,8 +92,12 @@ export default async function SummaryPage({
       isPaid: r.isPaid,
     }));
 
-  const totalAmount = rows.reduce((sum, r) => sum + r.amount, 0);
-  const totalPresent = rows.reduce((sum, r) => sum + r.present, 0);
+  let totalAmount = 0;
+  let totalPresent = 0;
+  for (const r of rows) {
+    totalAmount += r.amount;
+    totalPresent += r.present;
+  }
 
   return (
     <div>

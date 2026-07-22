@@ -58,25 +58,30 @@ export default async function StudentDetailPage({
   const { id } = await params;
   const supabase = await createClient();
 
-  const { data: student } = await supabase
-    .from("students")
-    .select("*")
-    .eq("id", id)
-    .single();
-
-  if (!student) notFound();
-
-  const [{ data: cls }, { data: records }] = await Promise.all([
-    supabase
-      .from("classes")
-      .select("name, weekday, start_time, end_time")
-      .eq("id", student.class_id)
-      .single(),
+  // student と records は独立（records は URL の id にのみ依存）。
+  // classes だけが student.class_id に依存するため、student にチェーンして3つを並列化する。
+  const studentPromise = Promise.resolve(
+    supabase.from("students").select("*").eq("id", id).single(),
+  );
+  const [{ data: student }, { data: records }, clsResult] = await Promise.all([
+    studentPromise,
     supabase
       .from("attendance_records")
       .select("lesson_date, status, unit_price_at_time")
       .eq("student_id", id),
+    studentPromise.then(({ data: s }) =>
+      s
+        ? supabase
+            .from("classes")
+            .select("name, weekday, start_time, end_time")
+            .eq("id", s.class_id)
+            .single()
+        : null,
+    ),
   ]);
+
+  if (!student) notFound();
+  const cls = clsResult?.data ?? null;
 
   // 月別に集約（請求額 = 出席分の unit_price_at_time 合計 = 単価スナップショット）。
   const byMonth = new Map<string, MonthAgg>();
