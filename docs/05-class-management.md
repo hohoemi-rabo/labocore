@@ -9,12 +9,12 @@
 
 ## Todo
 
-- [ ] 一覧 `/settings/classes`: 白カード+hairline+18px角丸のリストでコマ名・曜日・開始/終了時間を表示（`is_active = true` のみ）
-- [ ] 登録フォーム: コマ名 / 曜日（0=日〜6=土のセレクト）/ 開始・終了時間。追加ボタンは Action Blue ピル
-- [ ] 編集フォーム: 同項目。編集導線はテキストリンク（Action Blue）
-- [ ] Server Action + Zod で検証する（全項目必須、終了時間 > 開始時間）
-- [ ] 廃止 = 論理削除（`is_active = false`）。確認ダイアログ必須、実行ボタンは ink 塗り（赤を使わない）
-- [ ] 変更後は `revalidatePath` で一覧を更新する
+- [x] 一覧 `/settings/classes`: 白カード+hairline+18px角丸のリストでコマ名・曜日・開始/終了時間を表示（`is_active = true` のみ）
+- [x] 登録フォーム: コマ名 / 曜日（0=日〜6=土のセレクト）/ 開始・終了時間。追加ボタンは Action Blue ピル
+- [x] 編集フォーム: 同項目。編集導線はテキストリンク（Action Blue）
+- [x] Server Action + Zod で検証する（全項目必須、終了時間 > 開始時間）
+- [x] 廃止 = 論理削除（`is_active = false`）。確認ダイアログ必須、実行ボタンは ink 塗り（赤を使わない）
+- [x] 変更後は `revalidatePath` で一覧を更新する
 
 ## 完了条件
 
