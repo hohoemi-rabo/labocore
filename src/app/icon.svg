@@ -1,0 +1,16 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512">
+  <!-- LaboCore app icon: dark squircle / white L / Action Blue dot -->
+  <defs>
+    <clipPath id="squircle">
+      <path d="M256 0C67 0 0 67 0 256s67 256 256 256 256-67 256-256S445 0 256 0z"/>
+    </clipPath>
+  </defs>
+  <g clip-path="url(#squircle)">
+    <rect width="512" height="512" fill="#1d1d1f"/>
+  </g>
+  <!-- L letterform: round-capped strokes -->
+  <path d="M174 148 V 348 H 280" fill="none" stroke="#ffffff"
+        stroke-width="46" stroke-linecap="round" stroke-linejoin="round"/>
+  <!-- Action Blue dot (the attendance dot) -->
+  <circle cx="336" cy="348" r="29" fill="#0066cc"/>
+</svg>
