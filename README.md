@@ -42,6 +42,12 @@ NEXT_PUBLIC_SUPABASE_URL=https://<project-ref>.supabase.co
 NEXT_PUBLIC_SUPABASE_ANON_KEY=<anon (publishable) key>
 ```
 
+| 変数 | 用途 | 必須 |
+|---|---|---|
+| `NEXT_PUBLIC_SUPABASE_URL` | Supabase プロジェクト URL | ✅ |
+| `NEXT_PUBLIC_SUPABASE_ANON_KEY` | anon（publishable）キー。データ保護は RLS が担う | ✅ |
+| `CRON_SECRET` | keepalive cron の認証用（[後述](#supabase-スリープ防止keepalive-cron)）。本番のみ必須で、ローカルでは未設定で良い | 本番のみ |
+
 ### 3. 開発サーバー
 
 ```bash
@@ -68,11 +74,49 @@ npm run dev
 2. **Settings → Environment Variables** に以下を設定（Production / Preview / Development すべてに）:
    - `NEXT_PUBLIC_SUPABASE_URL`
    - `NEXT_PUBLIC_SUPABASE_ANON_KEY`
-   - ※ ローカルの `.env.local` と同じ値。anon（publishable）キーはクライアントに露出する前提のキーで、データ保護は Supabase 側の RLS が担う
+   - `CRON_SECRET` — keepalive cron の認証用（[後述](#supabase-スリープ防止keepalive-cron)）
+   - ※ Supabase の2つはローカルの `.env.local` と同じ値。anon（publishable）キーはクライアントに露出する前提のキーで、データ保護は Supabase 側の RLS が担う
 3. デプロイ後、本番 URL の `/login` から管理者ユーザーでログインできることを確認する
 4. 以降は `main` への push で自動デプロイされる
 
 > セキュリティ: 全テーブルで RLS（認証済みユーザーのみ全操作可）を有効化済み。Supabase Dashboard の **Authentication → Policies** と Advisors で定期的に確認すること。漏洩パスワード保護（HaveIBeenPwned 照合）は Dashboard の Authentication 設定から有効化を推奨。
+
+## Supabase スリープ防止（keepalive cron）
+
+Supabase 無料プランはプロジェクトに一定期間 DB アクティビティがないと一時停止される。
+これを防ぐため、Vercel Cron から1日1回 `/api/keepalive` を叩き、**実際に Postgres へ軽量クエリ**を投げてアクティビティを発生させる（単に 200 を返すだけでは DB の活動にならない）。
+
+- スケジュール: `vercel.json` の `0 3 * * *`（**UTC** = 12:00 JST）。Supabase は7日無アクティビティで停止するため1日1回で十分（Hobby プランの cron 上限とも一致）
+- クエリ先: `classes` テーブルに `head:true` / `count:'exact'` の最小クエリ
+- 認証: Vercel Cron が自動付与する `Authorization: Bearer ${CRON_SECRET}` を検証。不一致は 401
+- `src/middleware.ts` の matcher で `/api/keepalive` をセッション認証の対象から除外している（除外しないと未認証扱いで `/login` にリダイレクトされ cron が機能しない）
+
+### CRON_SECRET の設定
+
+```bash
+# 1. ランダム値を生成
+openssl rand -hex 32
+
+# 2. Vercel に登録（生成値を貼り付ける）
+vercel env add CRON_SECRET production
+
+# 3. 反映のため再デプロイ
+vercel --prod
+```
+
+### 動作確認
+
+```bash
+# 認証あり → 200 {"ok":true,"timestamp":"..."}
+curl -i -H "Authorization: Bearer $CRON_SECRET" https://<本番URL>/api/keepalive
+
+# 認証なし → 401 {"ok":false}
+curl -i https://<本番URL>/api/keepalive
+```
+
+登録状況は Vercel Dashboard の **Settings → Cron Jobs** で確認できる（実行履歴もここに出る）。
+
+> 補足: RLS が `authenticated` 限定のため anon キーでの件数は 0 件になるが、クエリ自体は Postgres に到達するのでスリープ防止としては有効。
 
 ## コマンド
 
