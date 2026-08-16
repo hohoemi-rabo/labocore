@@ -2,6 +2,7 @@ export const navItems = [
   { href: "/", label: "今日" },
   { href: "/calendar", label: "カレンダー" },
   { href: "/summary", label: "集計" },
+  { href: "/records", label: "記録" },
   { href: "/settings", label: "設定" },
 ] as const;
 

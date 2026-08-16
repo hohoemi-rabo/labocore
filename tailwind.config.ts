@@ -155,10 +155,13 @@ export default {
         // アクセント塗り（ボタン・日付ピル・アクティブタブ / bar はクラス選択の左端 5px）
         "accent-fill": `linear-gradient(135deg, var(--accent), ${accentMix(55, "#000")})`,
         "accent-bar": `linear-gradient(180deg, var(--accent), ${accentMix(55, "#000")})`,
-        // 固定色の塗り（管理画面の主要ボタン / コピーボタン / コピー完了）
+        // 固定色の塗り（管理画面の主要ボタン / コピーボタン / コピー完了 / 破壊的操作の確定）
         "sky-fill": "linear-gradient(135deg, #38bdf8, #2563eb)",
         "copy-fill": "linear-gradient(135deg, #8b7cf6, #6d28d9)",
         "done-fill": "linear-gradient(135deg, #34d399, #059669)",
+        // DESIGN_v2 §8: 破壊的操作の確定ボタン。濃色端は accent と同じ 55% の式で導出する
+        "off-fill":
+          "linear-gradient(135deg, #e11d48, color-mix(in srgb, #e11d48 55%, #000))",
         // 役割色の面
         "news-panel":
           "linear-gradient(150deg, rgba(251,191,36,.14), rgba(251,146,60,.05))",

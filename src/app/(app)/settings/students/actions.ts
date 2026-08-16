@@ -4,6 +4,7 @@ import { z } from "zod";
 import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
 import { createClient } from "@/lib/supabase/server";
+import { toFieldErrors, nullIfEmpty } from "@/lib/form";
 
 const studentSchema = z.object({
   name: z.string().trim().min(1, "氏名を入力してください"),
@@ -29,19 +30,6 @@ export type StudentFormState = {
   fieldErrors?: Record<string, string>;
   formError?: string;
 };
-
-function toFieldErrors(error: z.ZodError): Record<string, string> {
-  const fieldErrors: Record<string, string> = {};
-  for (const issue of error.issues) {
-    const key = String(issue.path[0] ?? "");
-    if (key && !fieldErrors[key]) fieldErrors[key] = issue.message;
-  }
-  return fieldErrors;
-}
-
-// 任意テキストは空文字を null に（DB では未入力を null で持つ）。
-const nullIfEmpty = (v: string | undefined) =>
-  v && v.trim() !== "" ? v.trim() : null;
 
 function parseForm(formData: FormData) {
   return studentSchema.safeParse({

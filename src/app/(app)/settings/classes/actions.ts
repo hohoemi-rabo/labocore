@@ -4,6 +4,7 @@ import { z } from "zod";
 import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
 import { createClient } from "@/lib/supabase/server";
+import { toFieldErrors } from "@/lib/form";
 
 const classSchema = z
   .object({
@@ -21,17 +22,6 @@ export type ClassFormState = {
   fieldErrors?: Record<string, string>;
   formError?: string;
 };
-
-// Zod の issues をフィールド別（最初の1件）に集約する。
-// error.flatten() のバージョン差異を避けるため path[0] で手動集約する。
-function toFieldErrors(error: z.ZodError): Record<string, string> {
-  const fieldErrors: Record<string, string> = {};
-  for (const issue of error.issues) {
-    const key = String(issue.path[0] ?? "");
-    if (key && !fieldErrors[key]) fieldErrors[key] = issue.message;
-  }
-  return fieldErrors;
-}
 
 function parseForm(formData: FormData) {
   return classSchema.safeParse({

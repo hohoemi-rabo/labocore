@@ -18,6 +18,7 @@
 - [ ] エラー文言はローズ・ラベル 14px/700 等、DESIGN_v2 §8 のフォーム規約に全フォームを合わせる
 - [ ] 挙動の維持を確認: 各 CRUD・検索絞り込み・論理削除（ConfirmDialog）・重複日付エラー・廃止済みコマの選択肢温存
 - [ ] 各画面から暫定白面ラッパーを外す
+- [ ] **React 19 のフォーム自動リセット問題を直す**（16 からの申し送り）: `<form action={formAction}>` は action が throw せずに返ると非制御フィールドをリセットするため、サーバー側エラー（休講日の重複など）で入力が消える。`ClassForm` / `ClosedDayForm` / `StudentForm` を `RecordForm`（`src/app/(app)/records/record-form.tsx`）と同じ **`startTransition` + 手動 dispatch** に寄せる
 
 ## 完了条件
 

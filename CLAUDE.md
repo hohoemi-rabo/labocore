@@ -103,7 +103,10 @@ LaboCore（ラボコア）— シニア向けパソコン・スマホ教室「�
 - **サイト名**: 「ほほ笑みラボ 授業の記録」で確定。合言葉は「ほほえみ」= env `KIROKU_PASSWORD`（httpOnly Cookie・有効期限1年目安）。PWA アイコンは実装時にデザインシステム準拠で作成（後日差し替え可）
 - **ルーティング**: `(kiroku)` route group・全ページ noindex。`/kiroku`（合言葉）→ `/kiroku/select`（クラスえらび）→ `/kiroku/[classId]`（クラスページ）。middleware は `/kiroku` 配下を Supabase Auth 対象から外し**合言葉 Cookie で判定**する（`/api/keepalive` 除外を壊さないこと）。タブ切替では「自分のクラス」の記憶 Cookie を変更しない（選び直しはフッター導線）
 - **anon RLS**: `lesson_records` は published のみ / `announcements` は掲載期間内のみ（日付判定は `(now() AT TIME ZONE 'Asia/Tokyo')::date`。UTC の `current_date` を使わない）/ `classes` は is_active / `closed_days` は全行。**students・attendance_records・payments の anon 完全遮断は変更しない**
-- **管理側**: ナビに「記録」を追加し `/records` 配下に集約（記録カード CRUD・`next-lessons`・`announcements`）。**新設管理画面（16〜18）は最初から v2 デザインで実装する**（v1 シェルとの混在は画面単位として許容。ページ側でフルブリードのダーク面を敷く。月次集計ヒーローの `-mx-4 -mt-6 md:-mx-8` が前例）
+- **管理側**: ナビに「記録」を追加し `/records` 配下に集約（記録カード CRUD・`next-lessons`・`announcements`）。**新設管理画面（16〜18）は最初から v2 デザインで実装する**（v1 シェルとの混在は画面単位として許容。ページ側でフルブリードのダーク面 `v2CanvasClass` を敷く）
+- **v2 画面のフォーム（16 で確立）**: `<form action={formAction}>` を**使わない**。React 19 は action が throw せずに返ると**非制御フィールドを自動リセット**するため、`{fieldErrors}` を返すと入力が全部消える。`startTransition(() => formAction(fd))` の手動 dispatch にする（送信ボタンは `type="button"` + `form.reportValidity()`）。前例は `src/app/(app)/records/record-form.tsx`
+- **写真を扱うフォーム**: ファイル入力に `name` を付けない（原寸が FormData に入る経路を作らない）。`shrinkImageInBrowser` で縮小した File だけを `append` し、**合計バイト数をクライアントで検査**する（Vercel の 413 は Server Action に到達しないため捕捉できない）。共通定数は `src/lib/records.ts`（`"use server"` からは非 async を export できない）
+- **共通ヘルパ**: `src/lib/form.ts` の `toFieldErrors` / `nullIfEmpty` を使う（各 actions.ts に再定義しない）
 - **画像**（15 で実装済み）: **ブラウザで縮小 → Server Action → サーバーで再変換 → R2** の二段構え。
   - **`src/lib/image-client.ts` の `shrinkImageInBrowser(file)`（長辺2000px）を送信前に必ず通す。** **Vercel のリクエストボディ上限は 4.5MB** でプラットフォーム側が 413 を返すため、`serverActions.bodySizeLimit` では超えられない（4mb 設定）。省くとローカルでは動いて本番だけ壊れる。HEIC 対策も兼ねる（sharp は HEIC を読めないが、canvas を通せば扱える形式になる）
   - `src/lib/image.ts` の `processImage(buffer, { maxEdge, quality })` で長辺 1200px（AI 送信用は `AI_MAX_EDGE`=768）+WebP 化 → `src/lib/r2.ts` の `uploadImage` で R2 へ保存し、DB には**完全な公開 URL** を持つ

@@ -4,6 +4,7 @@ import { z } from "zod";
 import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
 import { createClient } from "@/lib/supabase/server";
+import { toFieldErrors, nullIfEmpty } from "@/lib/form";
 
 const closedDaySchema = z.object({
   closed_date: z
@@ -16,21 +17,6 @@ export type ClosedDayFormState = {
   fieldErrors?: Record<string, string>;
   formError?: string;
 };
-
-// Zod の issues をフィールド別（最初の1件）に集約する。
-// error.flatten() のバージョン差異を避けるため path[0] で手動集約する。
-function toFieldErrors(error: z.ZodError): Record<string, string> {
-  const fieldErrors: Record<string, string> = {};
-  for (const issue of error.issues) {
-    const key = String(issue.path[0] ?? "");
-    if (key && !fieldErrors[key]) fieldErrors[key] = issue.message;
-  }
-  return fieldErrors;
-}
-
-// 任意テキストは空文字を null に（DB では未入力を null で持つ）。
-const nullIfEmpty = (v: string | undefined) =>
-  v && v.trim() !== "" ? v.trim() : null;
 
 // 休講日は登録・削除のみ（編集なし）。変更後はホーム(/)・カレンダー(/calendar)も再検証する。
 function revalidateAll() {
