@@ -1,0 +1,521 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<meta name="robots" content="noindex">
+<title>ほほ笑みラボ 授業の記録</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Noto+Sans+JP:wght@400;500;700;900&display=swap" rel="stylesheet">
+<style>
+  :root {
+    --bg: #0b0d12;
+    --surface: #161b26;
+    --surface-2: #1d2433;
+    --text: #f2f4f8;
+    --sub: #9aa3b5;
+    --line: rgba(255,255,255,.08);
+    --accent: #38bdf8;            /* 選択中クラスの色で上書きされる */
+    --accent-soft: rgba(56,189,248,.14);
+    --violet: #8b7cf6;
+    --radius: 20px;
+  }
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  html { font-size: 17px; }
+  body {
+    font-family: "Noto Sans JP", "Hiragino Sans", "Yu Gothic", "Meiryo", sans-serif;
+    background:
+      radial-gradient(900px 500px at 85% -10%, rgba(37,99,235,.20), transparent 60%),
+      radial-gradient(700px 420px at -10% 100%, rgba(225,29,72,.12), transparent 60%),
+      var(--bg);
+    background-attachment: fixed;
+    color: var(--text);
+    line-height: 1.85;
+    min-height: 100vh;
+  }
+  .eyebrow {
+    font-size: .68rem; font-weight: 700; letter-spacing: .22em;
+    text-transform: uppercase; color: var(--accent);
+  }
+  .tricolor {
+    height: 4px; border-radius: 99px; width: 76px;
+    background: linear-gradient(90deg, #4fc3f7 0 33%, #1e5bd6 33% 66%, #e11d48 66% 100%);
+  }
+
+  /* ---------- 入口画面(共通) ---------- */
+  .screen {
+    position: fixed; inset: 0; z-index: 100;
+    display: flex; align-items: center; justify-content: center;
+    padding: 1.5rem; overflow-y: auto;
+    background:
+      radial-gradient(900px 500px at 85% -10%, rgba(37,99,235,.25), transparent 60%),
+      radial-gradient(700px 420px at -10% 110%, rgba(225,29,72,.16), transparent 60%),
+      var(--bg);
+  }
+  .box {
+    background: linear-gradient(165deg, rgba(255,255,255,.055), rgba(255,255,255,.015));
+    border: 1px solid var(--line);
+    border-radius: 26px;
+    padding: 2.2rem 1.7rem;
+    max-width: 460px; width: 100%;
+    text-align: center;
+    box-shadow: 0 24px 60px rgba(0,0,0,.55), 0 2px 0 rgba(255,255,255,.05) inset;
+    backdrop-filter: blur(14px);
+  }
+  .box .tricolor { margin: 0 auto 1.1rem; }
+  .box h1 { font-size: 1.5rem; font-weight: 900; letter-spacing: .04em; line-height: 1.5; }
+  .box h1 small { display: block; font-size: .8rem; font-weight: 500; color: var(--sub); letter-spacing: .3em; margin-bottom: .3rem; }
+  .box p.lead { color: var(--sub); font-size: .92rem; margin: .8rem 0 1.4rem; }
+  #pw {
+    width: 100%; font-size: 1.35rem; text-align: center; color: var(--text);
+    padding: .7em .5em; border: 1px solid var(--line);
+    border-radius: 16px; background: rgba(0,0,0,.35);
+    box-shadow: 0 2px 8px rgba(0,0,0,.4) inset;
+  }
+  #pw:focus { outline: none; border-color: var(--accent); box-shadow: 0 0 0 3px var(--accent-soft), 0 2px 8px rgba(0,0,0,.4) inset; }
+  .mainBtn {
+    width: 100%; margin-top: 1.1rem; font-size: 1.15rem; font-weight: 700; color: #fff;
+    padding: .8em; border: none; border-radius: 16px; cursor: pointer;
+    background: linear-gradient(135deg, #38bdf8, #2563eb);
+    box-shadow: 0 10px 24px rgba(37,99,235,.4), 0 1px 0 rgba(255,255,255,.25) inset;
+    transition: transform .12s, box-shadow .12s;
+  }
+  .mainBtn:hover { transform: translateY(-2px); box-shadow: 0 14px 30px rgba(37,99,235,.5), 0 1px 0 rgba(255,255,255,.25) inset; }
+  .mainBtn:active { transform: translateY(0); }
+  #gate-error {
+    display: none; margin-top: 1rem; color: #fda4af; background: rgba(225,29,72,.12);
+    border: 1px solid rgba(225,29,72,.35);
+    border-radius: 12px; padding: .5em .8em; font-size: .92rem;
+  }
+  .hint { margin-top: 1.2rem; color: var(--sub); font-size: .82rem; }
+
+  /* ---------- クラス選択 ---------- */
+  .classGrid { display: grid; grid-template-columns: 1fr 1fr; gap: .8rem; margin-top: .4rem; }
+  .classGrid button {
+    position: relative; overflow: hidden; text-align: left;
+    padding: .9em 1em .8em; border: 1px solid var(--line); border-radius: 18px;
+    background: linear-gradient(160deg, rgba(255,255,255,.06), rgba(255,255,255,.012));
+    color: var(--text); cursor: pointer;
+    box-shadow: 0 10px 24px rgba(0,0,0,.35);
+    transition: transform .12s, box-shadow .12s, border-color .12s;
+  }
+  .classGrid button:hover { transform: translateY(-3px); box-shadow: 0 16px 32px rgba(0,0,0,.45); border-color: var(--c); }
+  .classGrid button::before {
+    content: ""; position: absolute; left: 0; top: 0; bottom: 0; width: 5px;
+    background: linear-gradient(180deg, var(--c), color-mix(in srgb, var(--c) 55%, #000));
+  }
+  .classGrid .d { font-size: 1.3rem; font-weight: 900; letter-spacing: .03em; }
+  .classGrid .d em { font-style: normal; font-size: .78rem; font-weight: 700; color: var(--c); margin-left: .35em; }
+  .classGrid .t { display: block; font-size: .78rem; color: var(--sub); }
+
+  /* ---------- 本体 ---------- */
+  #site { display: none; }
+  header.top {
+    position: sticky; top: 0; z-index: 50;
+    background: rgba(11,13,18,.82);
+    backdrop-filter: blur(12px);
+    border-bottom: 1px solid var(--line);
+    padding: .85rem 1.1rem .6rem;
+  }
+  .toprow { max-width: 680px; margin: 0 auto; display: flex; align-items: center; gap: .7rem; }
+  .brand { display: flex; align-items: center; gap: .6rem; }
+  .brand .mark {
+    width: 38px; height: 38px; border-radius: 12px; flex: none;
+    display: flex; align-items: center; justify-content: center; font-size: 1.25rem;
+    background: linear-gradient(135deg, var(--accent), color-mix(in srgb, var(--accent) 45%, #000));
+    box-shadow: 0 6px 16px color-mix(in srgb, var(--accent) 45%, transparent);
+  }
+  .brand .name { font-weight: 900; font-size: 1.02rem; line-height: 1.3; letter-spacing: .02em; }
+  .brand .name small { display: block; font-weight: 500; color: var(--sub); font-size: .68rem; letter-spacing: .18em; }
+  .dayTabs { max-width: 680px; margin: .7rem auto .15rem; display: flex; gap: .45rem; overflow-x: auto; padding-bottom: .35rem; }
+  .dayTabs button {
+    flex: 1; min-width: 3.1em; font-size: 1rem; font-weight: 700; line-height: 1.25;
+    padding: .42em 0; border: 1px solid var(--line); border-radius: 12px;
+    background: rgba(255,255,255,.04); color: var(--sub); cursor: pointer;
+    transition: transform .12s, box-shadow .12s;
+  }
+  .dayTabs button small { display: block; font-size: .6em; font-weight: 700; letter-spacing: .05em; }
+  .dayTabs button:hover { transform: translateY(-1px); }
+  .dayTabs button.active {
+    background: linear-gradient(135deg, var(--c), color-mix(in srgb, var(--c) 55%, #000));
+    border-color: transparent; color: #fff;
+    box-shadow: 0 8px 20px color-mix(in srgb, var(--c) 40%, transparent);
+  }
+
+  main { max-width: 680px; margin: 0 auto; padding: 1.4rem 1rem 4rem; }
+  .daytitle { display: flex; align-items: center; gap: .7rem; margin-bottom: 1.1rem; }
+  .daytitle h1 { font-size: 1.35rem; font-weight: 900; letter-spacing: .02em; }
+  .daytitle .tricolor { width: 56px; }
+
+  /* お知らせ */
+  .news {
+    border-radius: var(--radius);
+    border: 1px solid rgba(251,191,36,.35);
+    background: linear-gradient(150deg, rgba(251,191,36,.14), rgba(251,146,60,.05));
+    box-shadow: 0 14px 34px rgba(0,0,0,.35);
+    padding: 1rem 1.2rem; margin-bottom: 1rem;
+  }
+  .news .eyebrow { color: #fbbf24; }
+  .news h2 { font-size: 1.05rem; font-weight: 900; margin: .15rem 0 .1rem; }
+  .news p { font-size: .95rem; color: #e6d9bd; }
+
+  /* 次回の授業 */
+  .next {
+    position: relative; overflow: hidden;
+    border-radius: var(--radius);
+    border: 1px solid color-mix(in srgb, var(--accent) 45%, transparent);
+    background:
+      radial-gradient(420px 200px at 100% 0%, color-mix(in srgb, var(--accent) 22%, transparent), transparent 70%),
+      linear-gradient(160deg, var(--surface-2), var(--surface));
+    box-shadow: 0 18px 44px rgba(0,0,0,.45), 0 1px 0 rgba(255,255,255,.06) inset;
+    padding: 1.25rem 1.3rem 1.2rem; margin-bottom: 1rem;
+  }
+  .next .date { font-size: 1.12rem; font-weight: 700; margin-top: .2rem; }
+  .next .theme { font-size: 1.4rem; font-weight: 900; line-height: 1.5; margin: .15rem 0 .3rem; }
+  .next .extra { color: var(--sub); font-size: .92rem; }
+
+  /* 予定 */
+  .calendar {
+    border-radius: var(--radius);
+    border: 1px solid var(--line);
+    background: linear-gradient(160deg, rgba(255,255,255,.045), rgba(255,255,255,.012));
+    box-shadow: 0 12px 30px rgba(0,0,0,.35);
+    padding: 1rem 1.3rem; margin-bottom: 2rem; font-size: .95rem;
+  }
+  .calendar h2 { font-size: .98rem; font-weight: 900; margin-bottom: .25rem; }
+  .calendar .off { color: #fda4af; font-weight: 700; }
+
+  h2.section-title {
+    display: flex; align-items: center; gap: .7rem;
+    font-size: 1.2rem; font-weight: 900; margin: 0 0 1rem;
+  }
+  h2.section-title::after {
+    content: ""; flex: 1; height: 1px;
+    background: linear-gradient(90deg, var(--line), transparent);
+  }
+
+  /* 記録カード */
+  article.record {
+    border-radius: var(--radius);
+    border: 1px solid var(--line);
+    background: linear-gradient(165deg, var(--surface-2), var(--surface));
+    box-shadow: 0 16px 40px rgba(0,0,0,.42), 0 1px 0 rgba(255,255,255,.05) inset;
+    padding: 1.25rem 1.3rem 1.35rem; margin-bottom: 1.4rem;
+    transition: transform .15s, box-shadow .15s;
+  }
+  article.record:hover { transform: translateY(-3px); box-shadow: 0 22px 52px rgba(0,0,0,.5), 0 1px 0 rgba(255,255,255,.05) inset; }
+  .record .date {
+    display: inline-block; font-weight: 700; font-size: .82rem; color: #fff;
+    background: linear-gradient(135deg, var(--accent), color-mix(in srgb, var(--accent) 55%, #000));
+    border-radius: 999px; padding: .12em 1em; margin-bottom: .55rem;
+    box-shadow: 0 6px 14px color-mix(in srgb, var(--accent) 35%, transparent);
+  }
+  .record h3 { font-size: 1.22rem; font-weight: 900; line-height: 1.55; margin-bottom: .5rem; }
+  .record p.memo { margin-bottom: 1rem; color: #d6dbe6; }
+  .shot {
+    border: 1px solid var(--line); border-radius: 14px; overflow: hidden;
+    margin-bottom: 1rem; background: #fff;
+    box-shadow: 0 10px 26px rgba(0,0,0,.4);
+  }
+  .shot svg { display: block; width: 100%; height: auto; }
+  .shot .cap {
+    font-size: .8rem; color: var(--sub); padding: .45em .9em;
+    background: var(--surface); border-top: 1px solid var(--line);
+  }
+  .prompt {
+    border-radius: 16px;
+    border: 1px solid color-mix(in srgb, var(--violet) 40%, transparent);
+    background: linear-gradient(150deg, rgba(139,124,246,.16), rgba(139,124,246,.05));
+    padding: .95rem 1.05rem; margin-top: .3rem;
+  }
+  .prompt .eyebrow { color: var(--violet); }
+  .prompt pre {
+    white-space: pre-wrap; font-family: inherit; font-size: .96rem; line-height: 1.75;
+    background: rgba(0,0,0,.3); color: #e8e4ff;
+    border-radius: 12px; padding: .7em .9em; margin-top: .4rem;
+    border: 1px solid rgba(139,124,246,.25);
+    box-shadow: 0 2px 8px rgba(0,0,0,.35) inset;
+  }
+  .copyBtn {
+    margin-top: .7rem; font-size: .98rem; font-weight: 700; color: #fff;
+    padding: .55em 1.4em; border: none; border-radius: 999px; cursor: pointer;
+    background: linear-gradient(135deg, #8b7cf6, #6d28d9);
+    box-shadow: 0 8px 20px rgba(109,40,217,.4), 0 1px 0 rgba(255,255,255,.2) inset;
+    transition: transform .12s;
+  }
+  .copyBtn:hover { transform: translateY(-2px); }
+  .copyBtn.done { background: linear-gradient(135deg, #34d399, #059669); box-shadow: 0 8px 20px rgba(5,150,105,.4); }
+  .empty {
+    text-align: center; color: var(--sub);
+    border: 1px dashed var(--line); border-radius: var(--radius); padding: 2rem 1rem;
+  }
+  footer { text-align: center; color: var(--sub); font-size: .8rem; padding: 2.5rem 1rem 3rem; }
+  footer .tricolor { margin: 0 auto .8rem; }
+</style>
+</head>
+<body>
+
+<!-- ========== 画面1: 合言葉 ========== -->
+<div id="gate" class="screen">
+  <div class="box">
+    <div class="tricolor"></div>
+    <h1><small>HOHOEMI LAB</small>ほほ笑みラボ 授業の記録</h1>
+    <p class="lead">教室でお伝えした「あいことば」を入力してください</p>
+    <input id="pw" type="text" autocomplete="off" placeholder="あいことば">
+    <button class="mainBtn" onclick="checkPw()">開く</button>
+    <div id="gate-error">あいことばが違うようです。もう一度お試しください。</div>
+    <p class="hint">わからないときは、教室で先生に聞いてください。</p>
+  </div>
+</div>
+
+<!-- ========== 画面2: クラス選択 ========== -->
+<div id="daypick" class="screen" style="display:none">
+  <div class="box">
+    <div class="tricolor"></div>
+    <h1><small>SELECT CLASS</small>通っているクラスを選んでください</h1>
+    <p class="lead">あとから他のクラスのページも自由に見られます</p>
+    <div class="classGrid" id="classGrid"></div>
+  </div>
+</div>
+
+<!-- ========== 画面3: サイト本体 ========== -->
+<div id="site">
+  <header class="top">
+    <div class="toprow">
+      <div class="brand">
+        <div class="mark">😊</div>
+        <div class="name">ほほ笑みラボ<small>CLASS RECORD</small></div>
+      </div>
+    </div>
+    <div class="dayTabs" id="dayTabs"></div>
+  </header>
+  <main id="content"></main>
+</div>
+
+<script>
+  // ================= クラス定義(ここに1件足せばボタンもタブも自動で増える) =================
+  var CLASSES = [
+    { id: 'mon',  tab: '月',                      short: '月',        name: '月曜クラス',       day: '月曜日', time: '10:00〜12:00', color: '#f43f5e' },
+    { id: 'tue',  tab: '火',                      short: '火',        name: '火曜クラス',       day: '火曜日', time: '10:00〜12:00', color: '#fb923c' },
+    { id: 'wedA', tab: '水<small>午前</small>',   short: '水・午前',  name: '水曜(午前)クラス', day: '水曜日', time: '10:00〜12:00', color: '#38bdf8' },
+    { id: 'wedP', tab: '水<small>午後</small>',   short: '水・午後',  name: '水曜(午後)クラス', day: '水曜日', time: '13:30〜15:30', color: '#818cf8' },
+    { id: 'thu',  tab: '木',                      short: '木',        name: '木曜クラス',       day: '木曜日', time: '10:00〜12:00', color: '#34d399' },
+    { id: 'fri',  tab: '金',                      short: '金',        name: '金曜クラス',       day: '金曜日', time: '10:00〜12:00', color: '#e879f9' }
+  ];
+
+  // ================= お知らせ(全体 or 特定クラス向け) =================
+  var NEWS = [
+    { target: 'all', title: 'お盆休みのお知らせ', body: '8月13日(木)・14日(金)はお盆休みです。お間違えのないようご注意ください。' }
+  ];
+
+  // ================= 授業データ(サンプル) =================
+  var DATA = {
+    'mon': {
+      next: { date: '8月17日(月) 10:00〜12:00', theme: 'AIで昔の写真を修復しよう(続き)', extra: '持ち物: 直したい写真をスマホに入れてきてください' },
+      calendar: { lessons: '授業日: 3日・10日・17日・24日・31日', off: '' },
+      records: [
+        { date: '8月10日(月)', title: 'AIで昔の白黒写真をカラーにしました',
+          memo: '古いアルバムの写真をスマホで撮って、AIに色をつけてもらいました。「わぁ、こんな色だったかも」と歓声があがりましたね。',
+          shot: { lines: ['この白黒写真をカラーにして', 'できました。昭和の雰囲気を大切に色をつけています'], emoji: '📷' },
+          prompt: 'この白黒写真を、自然な色合いでカラー写真にしてください。当時の雰囲気が伝わるように、派手すぎない色でお願いします。' }
+      ]
+    },
+    'tue': {
+      next: { date: '8月18日(火) 10:00〜12:00', theme: '声でAIとおしゃべりしてみよう', extra: '持ち物: スマホ(充電をお忘れなく)' },
+      calendar: { lessons: '授業日: 4日・18日・25日', off: 'お休み: 11日(火)は山の日のためお休みでした' },
+      records: [
+        { date: '8月4日(火)', title: 'キーボードを使わず、声でAIに質問しました',
+          memo: 'マイクのボタンを押して話しかけるだけで、AIが答えてくれる練習をしました。文字を打つより早い!と好評でした。',
+          shot: { lines: ['(声で)おいしいだし巻き卵の作り方を教えて', 'はい、ふわふわに作るコツは3つあります'], emoji: '🎤' },
+          prompt: null }
+      ]
+    },
+    'wedA': {
+      next: { date: '8月19日(水) 10:00〜12:00', theme: '冷蔵庫の残り物でAIに献立を考えてもらおう(第2回)', extra: '' },
+      calendar: { lessons: '授業日: 5日・12日・19日・26日', off: '' },
+      records: [
+        { date: '8月5日(水)', title: 'AIに今晩のおかずを相談しました',
+          memo: '冷蔵庫にあるものを伝えると、AIが献立を提案してくれます。「なす、ピーマン、豚肉」で皆さん違うおかずになったのが面白かったですね。',
+          shot: { lines: ['なすとピーマンと豚肉で作れるおかずは?', '3品ご提案します。1. なすと豚肉のみそ炒め…'], emoji: '🍆' },
+          prompt: '冷蔵庫に なす、ピーマン、豚肉、卵 があります。この材料で作れる夕食のおかずを3つ、作り方も簡単に教えてください。70代の夫婦2人分です。' }
+      ]
+    },
+    'wedP': {
+      next: { date: '8月19日(水) 13:30〜15:30', theme: 'AIで旅の思い出アルバムを作ろう', extra: '持ち物: 旅行の写真をスマホに入れてきてください' },
+      calendar: { lessons: '授業日: 5日・12日・19日・26日', off: '' },
+      records: [
+        { date: '8月5日(水)', title: 'AIに写真整理のコツを教わりました',
+          memo: 'スマホにたまった写真をどう整理するか、AIに相談しながら実際にアルバム分けをしました。「削除する勇気」も大事、という話で盛り上がりましたね。',
+          shot: { lines: ['写真が3000枚…どう整理したらいい?', 'まずは「お気に入り」に印をつけることから始めましょう'], emoji: '📱' },
+          prompt: null }
+      ]
+    },
+    'thu': {
+      next: { date: '8月20日(木) 10:00〜12:00', theme: 'AIで「敬老の日」のカードを作ろう', extra: '持ち物: スマホ(充電をお忘れなく)' },
+      calendar: { lessons: '授業日: 6日・20日・27日', off: 'お休み: 13日(木)はお盆休みです' },
+      records: [
+        { date: '8月6日(木)', title: 'AIで暑中見舞いのイラストと文章を作りました',
+          memo: 'AIにお願いして、夏らしいイラストと、あいさつの文章を作ってもらいました。皆さん、それぞれ違う絵ができて盛り上がりましたね。',
+          shot: { lines: ['すいかとあさがおの絵をかいて…', 'はい、おまかせください! 🍉🌻'], emoji: '🖼️' },
+          prompt: '暑中見舞いのはがきに使う、すいかと朝顔の涼しげなイラストを描いてください。あわせて、孫に送るやさしい文章も3つ考えてください。' },
+        { date: '7月30日(木)', title: 'スマホのAIに旅行プランを相談してみました',
+          memo: '「日帰りで行けるところ」をAIに相談して、行き先・時間・持ち物まで提案してもらいました。条件を細かく伝えるほど、良い答えが返ってくるのがポイントでしたね。',
+          shot: { lines: ['日帰りでのんびりできる旅行先は?', 'おすすめを3つ。1. 川越 2. 高尾山…'], emoji: '🚃' },
+          prompt: '70代の夫婦が電車で行ける日帰り旅行のプランを3つ提案してください。歩く距離は少なめで、おいしい昼食が食べられるところがいいです。出発は東京駅です。' },
+        { date: '7月16日(木)', title: '怪しいメールをAIにチェックしてもらいました',
+          memo: '「荷物が届けられません」というメールが本物かどうか、AIに聞いて見分ける練習をしました。怪しいリンクは、押す前にまず相談。これが合言葉です。',
+          shot: { lines: ['このメール、本物でしょうか?', '⚠️ 詐欺の可能性が高いです。送信元が公式と異なります'], emoji: '🔍' },
+          prompt: null }
+      ]
+    },
+    'fri': {
+      next: { date: '8月21日(金) 10:00〜12:00', theme: 'AIと川柳を作って絵にしよう(続き)', extra: '' },
+      calendar: { lessons: '授業日: 7日・21日・28日', off: 'お休み: 14日(金)はお盆休みです' },
+      records: [
+        { date: '8月7日(金)', title: 'AIと一緒に川柳を作って、絵にしました',
+          memo: '自分で考えた川柳をAIに伝えて、その情景をイラストにしてもらいました。お孫さんに送ったらすぐ返事が来た、という方も。',
+          shot: { lines: ['「猛暑日に 孫より届く スタンプ絵」を絵にして', '心温まる場面を描きますね 🎨'], emoji: '✏️' },
+          prompt: '次の川柳の情景を、やさしい水彩画風のイラストにしてください。「猛暑日に 孫より届く スタンプ絵」' }
+      ]
+    }
+  };
+
+  var currentId = null;
+  var pid = 0;
+
+  // ================= 入口 =================
+  function checkPw() {
+    var v = (document.getElementById('pw').value || '').trim();
+    if (v === 'ほほえみ') {
+      document.getElementById('gate').style.display = 'none';
+      renderClassPick();
+      document.getElementById('daypick').style.display = 'flex';
+    } else {
+      document.getElementById('gate-error').style.display = 'block';
+    }
+  }
+  document.getElementById('pw').addEventListener('keydown', function(e){
+    if (e.key === 'Enter') checkPw();
+  });
+
+  function renderClassPick() {
+    var h = '';
+    CLASSES.forEach(function(c){
+      h += '<button style="--c:' + c.color + '" onclick="openClass(\'' + c.id + '\')">' +
+           '<span class="d">' + c.day + '<em>' + (c.short.indexOf('午') >= 0 ? c.short.split('・')[1] : '') + '</em></span>' +
+           '<span class="t">' + c.time + '</span></button>';
+    });
+    document.getElementById('classGrid').innerHTML = h;
+  }
+
+  function openClass(id) {
+    document.getElementById('daypick').style.display = 'none';
+    document.getElementById('site').style.display = 'block';
+    showClass(id);
+  }
+
+  // ================= 描画 =================
+  function esc(s) {
+    return String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');
+  }
+  function cls(id) { return CLASSES.find(function(c){ return c.id === id; }); }
+
+  function mkShot(shot) {
+    return '<div class="shot">' +
+      '<svg viewBox="0 0 600 230" xmlns="http://www.w3.org/2000/svg" role="img" aria-label="授業画面のイメージ">' +
+      '<rect width="600" height="230" fill="#f5f5f5"/>' +
+      '<rect width="600" height="34" fill="#e0dcd4"/>' +
+      '<circle cx="20" cy="17" r="6" fill="#ff5f57"/><circle cx="40" cy="17" r="6" fill="#febc2e"/><circle cx="60" cy="17" r="6" fill="#28c840"/>' +
+      '<rect x="20" y="52" width="420" height="46" rx="12" fill="#e8eef7"/>' +
+      '<text x="36" y="81" font-size="16" fill="#445">' + esc(shot.lines[0]) + '</text>' +
+      '<rect x="140" y="112" width="440" height="46" rx="12" fill="#fdf0e3"/>' +
+      '<text x="156" y="141" font-size="16" fill="#845">' + esc(shot.lines[1]) + '</text>' +
+      '<text x="280" y="205" font-size="30">' + shot.emoji + '</text>' +
+      '</svg>' +
+      '<div class="cap">授業画面のイメージ。本番では当日のスクリーンショットが入ります</div>' +
+      '</div>';
+  }
+
+  function showClass(id) {
+    currentId = id;
+    var c = cls(id);
+    var d = DATA[id];
+    document.documentElement.style.setProperty('--accent', c.color);
+    document.documentElement.style.setProperty('--accent-soft', 'color-mix(in srgb, ' + c.color + ' 16%, transparent)');
+
+    var tabs = '';
+    CLASSES.forEach(function(x){
+      tabs += '<button style="--c:' + x.color + '" class="' + (x.id === id ? 'active' : '') + '" onclick="showClass(\'' + x.id + '\')">' + x.tab + '</button>';
+    });
+    document.getElementById('dayTabs').innerHTML = tabs;
+
+    var h = '<div class="daytitle"><h1>' + c.name + '</h1><div class="tricolor"></div></div>';
+
+    NEWS.filter(function(n){ return n.target === 'all' || n.target === id; }).forEach(function(n){
+      h += '<section class="news"><div class="eyebrow">Information</div>' +
+           '<h2>📢 ' + esc(n.title) + '</h2><p>' + esc(n.body) + '</p></section>';
+    });
+
+    h += '<section class="next"><div class="eyebrow">Next Lesson / 次回の授業</div>' +
+         '<div class="date">' + esc(d.next.date) + '</div>' +
+         '<div class="theme">' + esc(d.next.theme) + '</div>' +
+         (d.next.extra ? '<div class="extra">' + esc(d.next.extra) + '</div>' : '') +
+         '</section>';
+
+    h += '<section class="calendar"><h2>📅 8月の予定(' + c.name + ')</h2>' +
+         '<div>' + esc(d.calendar.lessons) + '</div>' +
+         (d.calendar.off ? '<div class="off">' + esc(d.calendar.off) + '</div>' : '') +
+         '</section>';
+
+    h += '<h2 class="section-title">これまでの授業</h2>';
+
+    if (!d.records.length) {
+      h += '<div class="empty">このクラスの記録は、これから増えていきます。お楽しみに!</div>';
+    }
+    d.records.forEach(function(r){
+      h += '<article class="record"><span class="date">' + esc(r.date) + '</span>' +
+           '<h3>' + esc(r.title) + '</h3>' +
+           '<p class="memo">' + esc(r.memo) + '</p>' +
+           mkShot(r.shot);
+      if (r.prompt) {
+        pid++;
+        var idp = 'p' + pid;
+        h += '<div class="prompt"><div class="eyebrow">Prompt / この日AIにお願いした言葉</div>' +
+             '<pre id="' + idp + '">' + esc(r.prompt) + '</pre>' +
+             '<button class="copyBtn" onclick="copyPrompt(\'' + idp + '\', this)">📋 この言葉をコピーする(おうちでも試せます)</button></div>';
+      }
+      h += '</article>';
+    });
+
+    h += '<footer><div class="tricolor"></div>ほほ笑みラボ ― このページは生徒さん向けです。<br>わからないことは、次の授業で気軽に聞いてください。</footer>';
+    document.getElementById('content').innerHTML = h;
+    window.scrollTo(0, 0);
+  }
+
+  // ================= プロンプトのコピー =================
+  function copyPrompt(id, btn) {
+    var text = document.getElementById(id).textContent;
+    function done() {
+      btn.textContent = '✅ コピーしました';
+      btn.classList.add('done');
+      setTimeout(function(){
+        btn.textContent = '📋 この言葉をコピーする(おうちでも試せます)';
+        btn.classList.remove('done');
+      }, 2500);
+    }
+    if (navigator.clipboard && navigator.clipboard.writeText) {
+      navigator.clipboard.writeText(text).then(done);
+    } else {
+      var ta = document.createElement('textarea');
+      ta.value = text;
+      document.body.appendChild(ta);
+      ta.select();
+      document.execCommand('copy');
+      document.body.removeChild(ta);
+      done();
+    }
+  }
+</script>
+</body>
+</html>
