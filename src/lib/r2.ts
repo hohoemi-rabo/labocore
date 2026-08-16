@@ -6,7 +6,9 @@ import {
   PutObjectCommand,
   S3Client,
 } from "@aws-sdk/client-s3";
-import { PROCESSED_CONTENT_TYPE } from "./image";
+// 拡張子付きで書く。scripts/verify-r2.ts が Node から直接実行するため
+// （Node の ESM 解決は拡張子を省略できない）。tsconfig の allowImportingTsExtensions 前提。
+import { PROCESSED_CONTENT_TYPE } from "./image.ts";
 
 // 記録カードの写真を Cloudflare R2（S3 互換）に置く（REQUIREMENTS_phase2 §11）。
 // R2 は無料枠 10GB・配信の帯域課金なしで、この規模では実質恒久無料。
@@ -65,9 +67,12 @@ function getClient() {
       secretAccessKey: config.secretAccessKey,
     },
     // AWS SDK v3 は既定（WHEN_SUPPORTED）だと x-amz-checksum-* を送る。
-    // これは S3 互換ストアで受け付けられないことがあり、R2 でも過去に 400 の原因になった。
-    // SigV4 が署名済みペイロードハッシュで完全性を担保しているので、
-    // 追加のチェックサムは必要なときだけに絞る。
+    // R2 側は 2025-02 に対応済みで、Cloudflare の互換性ノートも削除されたため
+    // **既定のままでも現在は動く**。それでも明示するのは保険:
+    // ボディが Buffer なら普通のヘッダで送られるが、ストリームだと
+    // aws-chunked のトレーラ方式になり、こちらは R2 が未対応。
+    // 将来ここをストリームに変えた人が踏まないようにしておく。
+    // SigV4 が署名済みペイロードハッシュで完全性を担保しているので実害はない。
     requestChecksumCalculation: "WHEN_REQUIRED",
     responseChecksumValidation: "WHEN_REQUIRED",
   });
@@ -79,27 +84,37 @@ function getClient() {
 const publicUrlFor = (config: R2Config, key: string) =>
   `${config.publicBaseUrl}/${key}`;
 
-/**
- * 公開 URL からオブジェクトキーを取り出す。
- * 自分のバケットの URL でなければ null（他所の URL を渡されても何もしないため）。
- */
-function keyFromUrl(config: R2Config, url: string): string | null {
-  const prefix = `${config.publicBaseUrl}/`;
-  if (!url.startsWith(prefix)) return null;
+// このモジュールが作るキーの形。これ以外は自分の管理下のオブジェクトとみなさない。
+const KEY_PATTERN = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}\.webp$/;
 
-  const key = url.slice(prefix.length);
-  // パス区切りやクエリを含む値は想定外（キーは "{uuid}.webp" のみ）。
-  return key.length > 0 && !key.includes("/") && !key.includes("?") ? key : null;
+/**
+ * 公開 URL からオブジェクトキーを取り出す。形が違えば null。
+ *
+ * **ベース URL との前方一致では判定しない**。DB に完全な URL を保存しているのは
+ * 将来 r2.dev から独自ドメイン等へ移すためで（要件 §11）、前方一致にすると
+ * 移行した瞬間に既存行の URL が全部マッチしなくなり、削除も複製もできなくなる。
+ * キーの形（UUID + .webp）だけで判定すれば、ホストが変わっても動き続ける。
+ */
+function keyFromUrl(url: string): string | null {
+  let pathname: string;
+  try {
+    pathname = new URL(url).pathname;
+  } catch {
+    return null;
+  }
+
+  const key = pathname.split("/").pop() ?? "";
+  return KEY_PATTERN.test(key) ? key : null;
 }
 
 /**
- * 変換済み画像を R2 へ置き、完全な公開 URL を返す。
+ * `processImage` の出力を R2 へ置き、完全な公開 URL を返す。
  * キーは UUID にする（公開バケットなので、推測してたどれないようにする）。
+ *
+ * 受け取るのは常に WebP（`processImage` の出力）なので Content-Type と拡張子は固定する。
+ * 引数で変えられるようにすると、拡張子と中身が食い違う余地が生まれる。
  */
-export async function uploadImage(
-  body: Buffer,
-  contentType: string = PROCESSED_CONTENT_TYPE,
-): Promise<string> {
+export async function uploadImage(body: Buffer): Promise<string> {
   const { client, config } = getClient();
   const key = `${randomUUID()}.webp`;
 
@@ -108,7 +123,7 @@ export async function uploadImage(
       Bucket: config.bucket,
       Key: key,
       Body: body,
-      ContentType: contentType,
+      ContentType: PROCESSED_CONTENT_TYPE,
       // キーは UUID で中身が変わることがないため、恒久キャッシュにしてよい。
       CacheControl: "public, max-age=31536000, immutable",
     }),
@@ -125,9 +140,9 @@ export async function uploadImage(
 export async function deleteImage(url: string): Promise<void> {
   try {
     const { client, config } = getClient();
-    const key = keyFromUrl(config, url);
+    const key = keyFromUrl(url);
     if (!key) {
-      console.error("[r2] 自バケットの URL ではないため削除をスキップ:", url);
+      console.error("[r2] このモジュールが作った URL ではないため削除をスキップ:", url);
       return;
     }
 
@@ -146,7 +161,7 @@ export async function deleteImage(url: string): Promise<void> {
  */
 export async function copyImage(url: string): Promise<string> {
   const { client, config } = getClient();
-  const sourceKey = keyFromUrl(config, url);
+  const sourceKey = keyFromUrl(url);
   if (!sourceKey) {
     throw new Error(`複製できない画像 URL です: ${url}`);
   }
