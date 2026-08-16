@@ -24,6 +24,9 @@
 .DS_Store
 *.pem
 
+# 作業中に共有するスクリーンショット（リポジトリには入れない）
+screenshot*.png
+
 # debug
 npm-debug.log*
 yarn-debug.log*

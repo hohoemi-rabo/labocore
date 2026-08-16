@@ -13,11 +13,12 @@
 **手順は README の「[写真の保存先（Cloudflare R2）](../README.md#写真の保存先cloudflare-r2)」に記載済み。**
 設定後に `npm run verify:r2` が通れば完了。
 
-- [ ] Cloudflare アカウントで R2 バケットを作成する（例: `labocore-kiroku`）
-- [ ] r2.dev の公開アクセスを有効化し、公開 URL を控える
-- [ ] R2 API トークン（オブジェクト読み書き権限）を発行する
-- [ ] `R2_ACCOUNT_ID` / `R2_ACCESS_KEY_ID` / `R2_SECRET_ACCESS_KEY` / `R2_BUCKET` / `R2_PUBLIC_BASE_URL` を `.env.local` と Vercel（Production）に設定する
-- [ ] `npm run verify:r2` で疎通確認する
+- [x] Cloudflare アカウントで R2 バケットを作成する（`labocore-kiroku`・アジア太平洋・Standard）
+- [x] r2.dev の公開アクセスを有効化し、公開 URL を控える
+- [x] R2 API トークン（**アカウント API トークン** / オブジェクト読み書き / バケット限定 / TTL 無期限 / IP 制限なし）を発行する
+- [x] 5変数を `.env.local` に設定する
+- [ ] **同じ5変数を Vercel（Production）に設定する** ← 本番デプロイ前に必要
+- [x] `npm run verify:r2` で疎通確認する（2026-08-16・全8ステップ成功）
 
 ## Todo
 
@@ -37,7 +38,7 @@
 - [x] **`sharp` は `^0.35.3`**。`^0.34.x`（Next の optional dependency と同じ範囲）だと1コピーで済むが、**0.35.0 未満には libvips 由来の high severity 脆弱性**（CVE-2026-33327 / 33328 / 35590 / 35591）がある。利用者がアップロードした画像を通す経路なので採らない。`package.json` の `overrides` で Next 側も 0.35.3 に寄せ、コピーは1つに保つ（`next/image` は未使用なので影響なし）
 - [x] **AWS SDK v3 のチェックサム既定値を上書き**する。3.1111.0 の既定は `WHEN_SUPPORTED`（= `x-amz-checksum-*` を送る）で、S3 互換ストアで弾かれることがある。SigV4 が署名済みペイロードハッシュで完全性を担保しているため、`requestChecksumCalculation` / `responseChecksumValidation` とも `WHEN_REQUIRED` にする
 - [x] `processImage` は **`.rotate()` を resize より前に呼ぶ**（EXIF Orientation を実ピクセルへ焼き込む。省くとスマホ写真が横倒しになる）。sharp は既定でメタデータを引き継がないため **EXIF/GPS は変換時に落ちる**（要件 §11 の「個人情報を写さない」運用を技術面からも支える）
-- [x] 疎通確認は `scripts/verify-r2.ts`（`npm run verify:r2`）。一時ページではなく**常設のツール**にした（トークン更新時・障害切り分けにも使える）。`server-only` を import したモジュールを Node から実行するため `--conditions=react-server` を付ける（この条件で `server-only` が no-op に解決される）
+- [x] 疎通確認は `scripts/verify-r2.mts`（`npm run verify:r2`）。拡張子が `.mts` なのは Node に ESM だと即座に伝えるため（`.ts` だと毎回 `MODULE_TYPELESS_PACKAGE_JSON` の警告が出て、確認ツールとして紛らわしい）。一時ページではなく**常設のツール**にした（トークン更新時・障害切り分けにも使える）。`server-only` を import したモジュールを Node から実行するため `--conditions=react-server` を付ける（この条件で `server-only` が no-op に解決される）
 - [x] `tsconfig.json` に `allowImportingTsExtensions: true` を追加（スクリプトが `../src/lib/*.ts` を拡張子付きで import するため。`noEmit` 前提のオプション）
 - [x] README の keepalive の補足（「RLS が authenticated 限定のため件数 0」）がチケット14 以降は誤りだったので修正
 
@@ -53,7 +54,7 @@
 
 ## 完了条件
 
-- ローカルで「画像アップロード → WebP 変換確認 → 公開 URL で表示 → 削除」の一連が動作する
-  → `npm run verify:r2`（**R2 設定後に実行**）
-- 数 MB のスマホ写真がアップロードでき、変換後は数百 KB 程度に収まる
-  → 実測: 5.46 MB (3000×2000 JPEG) → **338 KB** (1200×800 WebP)
+- [x] ローカルで「画像アップロード → WebP 変換確認 → 公開 URL で表示 → 削除」の一連が動作する
+  → `npm run verify:r2` が全8ステップ成功（アップロード / 公開 URL から HTTP 200 + `image/webp` / 複製 / 削除 / 削除後 404）
+- [x] 数 MB のスマホ写真がアップロードでき、変換後は数百 KB 程度に収まる
+  → 実測: 5.46 MB (3000×2000 JPEG) → **337 KB** (1200×800 WebP)

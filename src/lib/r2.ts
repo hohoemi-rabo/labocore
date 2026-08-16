@@ -6,7 +6,7 @@ import {
   PutObjectCommand,
   S3Client,
 } from "@aws-sdk/client-s3";
-// 拡張子付きで書く。scripts/verify-r2.ts が Node から直接実行するため
+// 拡張子付きで書く。scripts/verify-r2.mts が Node から直接実行するため
 // （Node の ESM 解決は拡張子を省略できない）。tsconfig の allowImportingTsExtensions 前提。
 import { PROCESSED_CONTENT_TYPE } from "./image.ts";
 

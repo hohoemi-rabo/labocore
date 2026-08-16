@@ -21,7 +21,7 @@
     "paths": {
       "@/*": ["./src/*"]
     },
-    // scripts/verify-r2.ts が ../src/lib/*.ts を拡張子付きで import するため
+    // scripts/verify-r2.mts が ../src/lib/*.ts を拡張子付きで import するため
     // （Node の ESM 解決は拡張子を要求する）。noEmit 前提のオプション。
     "allowImportingTsExtensions": true
   },
