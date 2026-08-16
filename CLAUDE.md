@@ -14,7 +14,7 @@ LaboCore（ラボコア）— シニア向けパソコン・スマホ教室「�
 
 **フェーズ1（チケット 01〜12）は実装完了し、本番運用中**。URL は https://labocore.vercel.app（Vercel・GitHub 連携で `main` push により自動デプロイ）。8画面（今日の出欠 / カレンダー / 月次集計 / 生徒・コマ・休講日管理 / 生徒詳細 / ログイン）が稼働し、Supabase スリープ防止の keepalive cron も稼働中（下記）。
 
-**フェーズ2「授業記録」はチケット 13〜28 に分割済み。13〜20 が実装完了し、次は 21 から着手する。** 現状の詳細は下記「フェーズ2の現状」、横断的な確定事項は「フェーズ2の実装方針」を参照。
+**フェーズ2「授業記録」はチケット 13〜28 に分割済み。13〜21 が実装完了し（M1 = 生徒向け一式が本番稼働）、次は 22 から着手する。** 現状の詳細は下記「フェーズ2の現状」、横断的な確定事項は「フェーズ2の実装方針」を参照。
 
 **運用者タスクの状況**: R2 のバケット・トークン・env（ローカル + Vercel Production）は設定済み。残るのは (a) Supabase Dashboard での漏洩パスワード保護の有効化（フェーズ1からの積み残し・急ぎでない）、(b) **`KIROKU_PASSWORD`（合言葉「ほほえみ」）を Vercel Production に登録する**（ローカルの `.env.local` は設定済み。**未登録のまま本番デプロイすると生徒向けページが fail-closed で開けない**）。
 
@@ -32,6 +32,7 @@ LaboCore（ラボコア）— シニア向けパソコン・スマホ教室「�
 - `npm run build` — 本番ビルド（Turbopack）
 - `npm run lint` — ESLint 実行
 - `npm run verify:r2` — R2 の疎通確認（アップロード→取得→複製→削除→404 を通しで検査）
+- `npm run icons` — 生徒向けアイコンの PNG を原本 SVG から焼き直す（`public/icons/kiroku-icon.svg` → 4種）
 - テストフレームワークは未導入
 
 **⚠️ `npm run dev` を動かしたまま `npm run build` を実行しない。** `.next` に開発用と本番用の成果物が混ざり、`Failed to load chunk …` の実行時エラーになる。起きたら dev を止めて `rm -rf .next` してから起動し直す。
@@ -80,6 +81,8 @@ LaboCore（ラボコア）— シニア向けパソコン・スマホ教室「�
   - `src/lib/kiroku/gate.ts` — Cookie 名・属性・トークン導出。**Edge の middleware と Node の Server Action の両方から import される純粋モジュール。`next/headers` も Supabase も持ち込まないこと**（middleware のバンドルが壊れる。`classes.ts` を middleware から import するのも不可）。ハッシュは Web Crypto（`require("crypto")` は Edge ビルドを壊す）。
   - Cookie は `kiroku_gate`（合言葉の SHA-256 導出値）と `kiroku_class`（記憶クラス）の2本。どちらも httpOnly・`path=/kiroku`・`sameSite=lax`・`maxAge` 1年。**`cookies().delete()` は `path=/` で消しにいくのでこの Cookie には効かない。`set(name, "", { ...kirokuCookieOptions, maxAge: 0 })` を使う。**
   - `KIROKU_PASSWORD` 未設定は fail-closed。合言葉画面自体は開くのでループしない。
+  - **`config.matcher` はチケット21 で拡張子除外グループに `webmanifest` を1語だけ追加した**（`.*\.(?:svg|png|jpg|jpeg|gif|webp|webmanifest)$`）。前方一致の枝（`/api/keepalive` 等）は無変更。⚠️ この結果、**今後 `.webmanifest` で終わるルートは無認証**になる。
+  - **iOS のホーム画面 Web アプリは Safari と Cookie の保管庫が別。** iPhone はホーム画面から開いた初回だけ合言葉とクラス選びをやり直す（Android は引き継がれる）。仕様として受け入れ済み。
   - 行き先の判断（K1 / 記憶クラス / クラスえらび）は `/kiroku/page.tsx` だけが持つ。Server Action 側で計算しない。
 
 ### CRUD の型（05 コマ・06 生徒で確立。08 休講日等も踏襲）
@@ -109,7 +112,7 @@ LaboCore（ラボコア）— シニア向けパソコン・スマホ教室「�
 - `src/app/(app)/attendance-board.tsx`（`useOptimistic`+`useTransition`+`useToast` の中心）/ `attendance-toggle.tsx`（出席｜欠席の2セグメント pill）/ `add-student.tsx`（別日来訪の追加）。`doneLabel`/`addLabel` で文言を差し替えて再利用する。
 - `src/app/(app)/summary/` — 月次集計。`setPayment` も同じ「redirect せず `{ error? }`・楽観的更新」パターン（`payments` を `onConflict: "student_id,target_month"` で upsert）。集計は `attendance_records` を月範囲取得し **JS 集約**（`unit_price_at_time` を合計＝スナップショット）。
 
-## フェーズ2の現状（13〜20 実装済み・21 から着手）
+## フェーズ2の現状（13〜21 実装済み・22 から着手）
 
 ### 追加済みの DB（14）
 
@@ -138,10 +141,12 @@ LaboCore（ラボコア）— シニア向けパソコン・スマホ教室「�
 | `src/components/v2/styles.ts` | `v2CanvasClass` / `entryCanvasClass` / `kirokuCanvasClass` / `entryBoxClass` / `glassCardClass` / `cardClass` / `accentCardClass` / `eyebrowClass`(+News/Prompt) / `sectionTitleClass` / `tricolorClass`(+Sm) / `accentButtonClass` / `skyButtonClass` / `entryButtonClass` / `copyButtonClass`(+Done) / `datePillClass` |
 | `src/components/v2/form.ts` | `labelClass` / `inputClass` / `selectClass` / `textareaClass` / `entryInputClass` / `errorClass` / `errorBandClass` |
 | `src/components/v2/confirm-dialog.tsx`・`toast.tsx` | v2 版（v1 版はダーク面で読めない。**v2 画面では必ず v2 版を import する**） |
+| `public/manifest.webmanifest` | 生徒向け PWA のマニフェスト（`(kiroku)/layout.tsx` の `metadata.manifest` から参照） |
+| `public/icons/` | `kiroku-icon.svg`（原本）+ 生成 PNG 4種。`scripts/build-icons.mts`（`npm run icons`）で焼く |
 
 `scripts/verify-r2.mts`（`npm run verify:r2`）は R2 の疎通確認ツール（常設）。
 
-### 追加済みの画面（16〜20・すべて v2 デザイン）
+### 追加済みの画面（16〜21・すべて v2 デザイン）
 
 管理側（16〜18）:
 
@@ -157,18 +162,26 @@ LaboCore（ラボコア）— シニア向けパソコン・スマホ教室「�
 - `/kiroku` — K1 合言葉。通過済みなら記憶クラス or クラスえらびへ振り分ける（判断はここだけが持つ）
 - `/kiroku/select` — K2 クラスえらび。**クライアント JS ゼロ**（素の `<form action>` + `<button name="class_id">`）
 - `/kiroku/[classId]` — K3 クラスページ（20）。sticky ヘッダー + クラスタブ + お知らせ + 次回のじゅぎょう + 今月のよてい + 記録カード。`copy-prompt-button.tsx` が生徒向け唯一のクライアント部品
-- `(kiroku)/layout.tsx` — `metadata`（`robots: noindex` / `title.template`）と `dynamic = "force-dynamic"` だけの pass-through。**面は各ページが `entryCanvasClass` / `kirokuCanvasClass` で敷く**
+- `(kiroku)/layout.tsx` — `metadata`（`robots: noindex` / `title.template` / `manifest` / `icons` / `appleWebApp`）と `viewport`（`themeColor` / `colorScheme`）と `dynamic = "force-dynamic"` だけの pass-through。**面は各ページが `entryCanvasClass` / `kirokuCanvasClass` で敷く**
+- PWA（21）— `/kiroku` をホーム画面に追加できる。マニフェストとアイコンは `public/` 配下（下記「PWA まわりの落とし穴」）
 
-### 21（PWA・先行お披露目）で必ず踏まえること
+### 22 以降で必ず踏まえること
 
-19〜20 で済んだこと: anon クライアントの共通化 / middleware の合言葉分岐 / `(kiroku)` layout と `force-dynamic` / クラスページ本体。
+19〜21 で済んだこと: anon クライアントの共通化 / middleware の合言葉分岐 / `(kiroku)` layout と `force-dynamic` / クラスページ本体 / PWA 一式。
 
-- **`force-dynamic` は `(kiroku)/layout.tsx` の1か所で配下の page に効く**（18 からの申し送り。生徒向けは anon で読むため**ルートキャッシュが効いてしまい**、日付をまたいでも何のミューテーションも起きないので期限切れのお知らせが出続ける）。**⚠️ route handler には継承されない** — 21 で manifest を `route.ts` / `manifest.ts` で出すなら個別に指定する
-- **⚠️ middleware の matcher は `.webmanifest` / `.json` を除外していない。** `/manifest.webmanifest` を素直に置くと未ログインの生徒が `/login` へ飛ばされインストールできない（21 の Todo に記載済み）
+- **`force-dynamic` は `(kiroku)/layout.tsx` の1か所で配下の page に効く**（18 からの申し送り。生徒向けは anon で読むため**ルートキャッシュが効いてしまい**、日付をまたいでも何のミューテーションも起きないので期限切れのお知らせが出続ける）。**⚠️ route handler には継承されない**
 - **⚠️ キャッシュの確認は本番ビルドでしかできない。** `npm run dev` はルートキャッシュを適用しないので、`force-dynamic` が無くても「期限切れのお知らせが出ない」が通ってしまう。`rm -rf .next && npm run build && npm start` で確認する
-- **⚠️ LAN の IP（`http://192.168.x.x:3000`）で実機確認するときは `npm run dev` を使う。** 本番ビルドだと合言葉 Cookie が `Secure` 付きになり、平文 http では保存されず合言葉画面から進めない（`secure: NODE_ENV === "production"`）。あわせて `navigator.clipboard` も非 secure context では undefined になる（20 でフォールバック実装済み・実機での動作確認は 21 の Todo）
+- **⚠️ LAN の IP（`http://192.168.x.x:3000`）で実機確認するときは `npm run dev` を使う。** 本番ビルドだと合言葉 Cookie が `Secure` 付きになり、平文 http では保存されず合言葉画面から進めない（`secure: NODE_ENV === "production"`）。あわせて `navigator.clipboard` も非 secure context では undefined になる。**`http://localhost:3000` はこの制約に当てはまらない**（trustworthy origin 扱いなので本番ビルドでもゲートを通しで歩ける）
 - **⚠️ 開発環境（WSL）に絵文字フォントが無い。** 📢 📅 📋 😊 は豆腐で表示されるので、絵文字の見た目はヘッドレスでは確認できない。実機で見る
-- **クラスタブは水曜午後クラスを足すと6個になり横スクロールする。** クライアント JS を持たないので自動スクロールはしない（375px でアクティブタブに手が届くかを 21 で確認）
+- **クラスタブは水曜午後クラスを足すと6個になり横スクロールする。** 実測で溢れ13px・アクティブタブは画面内・body は横スクロールしない（21 で DOM 複製により検証済み）。クライアント JS を持たないので自動スクロールはしない
+
+### PWA まわりの落とし穴（21 で判明）
+
+- **`app/manifest.ts` を作らない。** `public/manifest.webmanifest` と URL が衝突する。そもそも `(kiroku)` 配下に置いても**無言で無視され**（規約はアプリルート限定）、ルートに置くと管理画面まで `<link rel="manifest">` が付く
+- **`(kiroku)` 配下で `icon.*` / `apple-icon.*` のファイル規約は効かない。** `(kiroku)/layout.tsx` に `metadata.icons` があると規約アイコンが全部無効になるため。アイコンは `public/icons/` + `metadata.icons` で一元管理する
+- **`app/favicon.ico` を足さない。** `metadata.icons` があっても抑制されず、全ルート（`/kiroku` を含む）に入ってしまう
+- **マニフェストの `scope` / `start_url` に末尾スラッシュを付けない。** `"/kiroku/"` にすると scope 指定ごと破棄されて `/` に化け、インストール済みアプリが管理画面まで飲み込む。警告は出ない
+- **アイコンの差し替えは `public/icons/kiroku-icon.svg` を置き換えて `npm run icons` → PNG をコミット。** ただし **iOS はインストール済みのアイコンを更新しない**（生徒さんが削除して追加し直す必要がある）ので、配布前に絵柄を確定させる
 - 「午前/午後」を出すかの判定は `src/lib/kiroku/classes.ts` の `periodLabels()` が単一の情報源。クラスえらび（K2）とクラスタブ（K3）で共用しているので、片方だけ書き換えない
 - クラス色の**重複は許容される仕様**。色だけに頼らず見分けられるようにする。**クラスえらびは「曜日＋（同曜日に2コマ以上あるときだけ午前/午後）＋時間帯」で、クラス名は出さない**（REQUIREMENTS_phase2 §7 K2 の「クラス名を併記」を上書きする決定。19 のチケットに理由あり）
 

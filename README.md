@@ -195,6 +195,21 @@ npm run verify:r2
 - 一度入れると httpOnly Cookie に記憶され、**約1年は聞かれない**。クラスも記憶するので、次回からは自分のクラスのページが直接開く
 - 全ページ `noindex`（検索結果に出ない）
 
+### ホーム画面に追加（PWA）
+
+`/kiroku` は「ホーム画面に追加」で1タップ起動できる（スコープは `/kiroku` のみ。管理画面は含まない）。
+
+- **LINE のアプリ内ブラウザからは追加できない。** iPhone は「Safariで開く」、Android は「Chromeで開く」を先に押してもらう。案内文の冒頭に書くこと
+- **iPhone はホーム画面から開いた初回だけ、合言葉をもう一度聞かれる。** iOS は Safari とホーム画面 Web アプリで Cookie の保管庫が分かれているため。Android は引き継がれる
+- オフライン閲覧（Service Worker）は入れていない。期限切れのお知らせを確実に消すために毎回サーバーへ問い合わせる設計なので、キャッシュを挟むとその保証が壊れる
+
+**アイコンを差し替えるとき**
+
+1. `public/icons/kiroku-icon.svg` を編集する（librsvg で描くので `<style>`・CSS クラス・`filter`・`mask` は使えない）
+2. `npm run icons` で PNG 4種を焼き直す
+3. 生成された PNG も一緒にコミットする
+4. ⚠️ **iPhone はインストール済みのアイコンを更新しない。** すでに追加した生徒さんには、削除して追加し直してもらう必要がある（Android は数日で自動的に貼り替わる）
+
 **運用メモ**
 
 - `KIROKU_PASSWORD` を変えて再デプロイすると、**配布済みの Cookie は自動的に無効**になる（全員がもう一度入力する）
@@ -206,3 +221,4 @@ npm run verify:r2
 - `npm run dev` — 開発サーバー（Turbopack）
 - `npm run build` — 本番ビルド（Turbopack）
 - `npm run lint` — ESLint
+- `npm run icons` — 生徒向けアイコンの PNG を生成（`public/icons/kiroku-icon.svg` から）

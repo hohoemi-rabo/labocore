@@ -1,0 +1,40 @@
+{
+  "id": "/kiroku",
+  "name": "ほほ笑みラボ 授業の記録",
+  "short_name": "授業の記録",
+  "description": "ほほ笑みラボの授業のようすをまとめたページです。",
+  "lang": "ja",
+  "dir": "ltr",
+  "start_url": "/kiroku",
+  "scope": "/kiroku",
+  "display": "standalone",
+  "orientation": "portrait",
+  "background_color": "#0b0d12",
+  "theme_color": "#0b0d12",
+  "icons": [
+    {
+      "src": "/icons/kiroku-192.png",
+      "sizes": "192x192",
+      "type": "image/png",
+      "purpose": "any"
+    },
+    {
+      "src": "/icons/kiroku-512.png",
+      "sizes": "512x512",
+      "type": "image/png",
+      "purpose": "any"
+    },
+    {
+      "src": "/icons/kiroku-192.png",
+      "sizes": "192x192",
+      "type": "image/png",
+      "purpose": "maskable"
+    },
+    {
+      "src": "/icons/kiroku-512.png",
+      "sizes": "512x512",
+      "type": "image/png",
+      "purpose": "maskable"
+    }
+  ]
+}

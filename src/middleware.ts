@@ -44,6 +44,14 @@ export const config = {
     // /api/keepalive は Vercel Cron が CRON_SECRET の Bearer で叩くため、
     // セッション認証（未認証は /login へリダイレクト）の対象から除外する。
     // ※ 他の API ルートは既定どおり保護されたままにする（個人情報を扱うため）
-    "/((?!api/keepalive|_next/static|_next/image|favicon.ico|.*\\.(?:svg|png|jpg|jpeg|gif|webp)$).*)",
+    //
+    // `webmanifest` はチケット21 で追加（PWA のマニフェスト用）。
+    // マニフェストの取得は仕様上 Cookie を送らず、Next の metadata API では
+    // crossOrigin も付けられないため、ゲートの内側に置くと未ログインの生徒が
+    // 永久に取得できない。中身は名前・色・アイコンのパスだけなので外に出す。
+    // ⚠️ この結果、**今後 `.webmanifest` で終わるルートは無認証になる**。
+    // ⚠️ 前方一致の枝（api/keepalive 等）と、この `$` 終端の拡張子グループは別物。
+    //    枝の構造は触らないこと（触ると keepalive の除外が壊れる）。
+    "/((?!api/keepalive|_next/static|_next/image|favicon.ico|.*\\.(?:svg|png|jpg|jpeg|gif|webp|webmanifest)$).*)",
   ],
 };

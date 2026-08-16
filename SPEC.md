@@ -30,7 +30,7 @@
 | パスエイリアス | `@/*` → `./src/*` |
 | テスト | フレームワーク未導入（フェーズ1では手動確認） |
 
-- npm スクリプト: `dev`（`next dev --turbopack`）/ `build`（`next build --turbopack`）/ `start` / `lint`（`eslint`）。
+- npm スクリプト: `dev`（`next dev --turbopack`）/ `build`（`next build --turbopack`）/ `start` / `lint`（`eslint`）/ `verify:r2`（R2 疎通確認）/ `icons`（生徒向けアイコンの PNG 生成）。
 - Supabase プロジェクト ref: `labocore = hjcctlwaabkogeybqlbi`。PostgREST 14.5 / Postgres。
 
 ### 環境変数
@@ -211,7 +211,8 @@
 - Supabase Auth（メール+パスワード）。**管理者1名を Supabase Dashboard で手動作成**（新規登録画面なし）。
 - **middleware で管理側の全ルートを保護**（`src/middleware.ts` → `src/lib/supabase/middleware.ts` の `updateSession`）:
   - matcher は静的ファイルと `/api/keepalive` を除外し、それ以外全ルートで実行。
-  - ただし `/kiroku` 配下だけは `middleware.ts` 側で分岐し、`updateSession` を呼ばずに合言葉 Cookie で判定する（下記「生徒向け `/kiroku` の合言葉ゲート」）。**matcher は変更していない**ため `/api/keepalive` の除外はそのまま。
+  - ただし `/kiroku` 配下だけは `middleware.ts` 側で分岐し、`updateSession` を呼ばずに合言葉 Cookie で判定する（下記「生徒向け `/kiroku` の合言葉ゲート」）。
+  - matcher はチケット21 で**拡張子の除外グループに `webmanifest` を1語だけ追加**した（`.*\.(?:svg|png|jpg|jpeg|gif|webp|webmanifest)$`）。前方一致の枝（`api/keepalive` 等）は無変更で、`/api/keepalive` の除外はそのまま。
   - `supabase.auth.getClaims()` でセッション更新。未認証で `/login` 以外 → `/login` へリダイレクト。認証済みで `/login` → `/` へ。
   - `createServerClient` と `getClaims()` の間にコードを挟まない（セッションがランダム失効する不具合回避）。`getSession()` はサーバーで使わない。
 - ログイン: `src/app/(auth)/login/actions.ts` の `login`。Zod 検証 → `signInWithPassword` → 失敗は**原因を伏せた汎用メッセージ**（列挙攻撃対策）→ 成功で `revalidatePath("/","layout")` → `redirect("/")`。
@@ -267,6 +268,30 @@
 - アクセントの注入は**ルート1か所**（`accentStyle(cls.themeColor)`）。タブ・日付ピル・次回カードのグローがすべて `var(--accent)` を参照する。
 - クラスタブは `<Link prefetch={false}>`。記憶クラス Cookie は**変更しない**（変えるのはフッターの「クラスをえらびなおす」だけ）。
 - **キャッシュの確認は本番ビルドでのみ有効。** `npm run dev` はルートキャッシュを適用しないため、`force-dynamic` が無くても「期限切れのお知らせが出ない」が通ってしまう。`npm run build && npm start` で確認する。
+
+### PWA（チケット21）
+
+生徒向けエリアだけを「ホーム画面に追加」できるようにする。管理画面には一切出さない。
+
+- **マニフェストは `public/manifest.webmanifest`（静的ファイル）**。`(kiroku)/layout.tsx` の `metadata.manifest` から参照するので `<link rel="manifest">` は `/kiroku` 配下にしか出ない。
+  - **Next のファイル規約（`app/manifest.ts`）は使えない**。`(kiroku)` 配下に置くと**無言で無視され**（規約はアプリルート限定）、アプリルートに置くと全ルートにマージされて管理画面まで汚染する。
+  - **`scope` / `start_url` は末尾スラッシュ無しの `/kiroku`。** `"/kiroku/"` にすると「範囲内」判定（生の文字列前方一致）で `start_url` が範囲外になり、**scope 指定ごと破棄されて既定の `/` に化ける**（＝インストール済みアプリが管理画面まで飲み込む）。警告は出ない。
+  - `id: "/kiroku"` を明示する。省くと `start_url` が同一性になり、将来変更したとき Android にアイコンが2つ生える。
+  - `display: standalone` / `orientation: portrait` / `background_color`・`theme_color` = `#0b0d12`。
+- **middleware**: 拡張子除外グループに `webmanifest` を追加（上記 §6）。マニフェストの取得は仕様上 Cookie を送らず、`metadata.manifest` に `crossOrigin` を指定する手段も無い（Next は Vercel の preview のときだけ自動付与するので**プレビューで通って本番で壊れる**）。したがってゲートの外に出すのが唯一の解。中身は名前・色・アイコンのパスだけ。
+- **アイコン**: 原本 `public/icons/kiroku-icon.svg` を `npm run icons`（`scripts/build-icons.mts`・sharp）で PNG 化してコミットする。
+
+| ファイル | 用途 |
+|---|---|
+| `kiroku-192.png` / `kiroku-512.png` | マニフェスト。`any` と `maskable` に同じファイルを使う（モチーフを中央80%の円内に収めてあるため兼用できる） |
+| `kiroku-apple-180.png` | iOS。**アルファチャンネルごと削除して不透明**（透明を黒に潰され、角丸を焼くと二重丸になる） |
+| `kiroku-32.png` | SVG ファビコン非対応ブラウザ向け |
+
+- **`metadata.icons` を `(kiroku)/layout.tsx` に置くと、その配下ではファイル規約のアイコンが全部無効になる**（Next は `resolvedMetadata.icons` が falsy のときしか規約アイコンを入れない）。結果として `src/app/icon.svg`（管理用の L マーク）は `/kiroku` から消える——これは意図した挙動。**`apple` だけ書くと `icon` が空になる**ので両方列挙すること。
+- **`statusBarStyle: "black"`**。`black-translucent` は Web View がステータスバーの下まで広がり `top:0` の sticky ヘッダーに時計が重なる。同じ理由で **`viewportFit: "cover"` も使わない**（`env(safe-area-inset-*)` を各所に入れるまでは）。
+- `themeColor` は `export const viewport` 側（`metadata.themeColor` は Next 14 以降 非推奨）。**`maximumScale` / `userScalable` は入れない**（シニアのピンチズームを殺さない）。
+- **Service Worker は入れない**。`/kiroku` の `force-dynamic` は「期限切れのお知らせを消す」ための仕組みで、SW キャッシュはそれを真っ先に壊す（しかも生徒向けはミューテーションが起きないので管理側から消せない）。インストール可否には影響しない。
+- **iOS のホーム画面 Web アプリは Safari と Cookie の保管庫が別**。合言葉ゲートの性質として、iPhone は**ホーム画面から開いた初回だけ合言葉とクラス選びをやり直す**（Android は引き継がれる）。仕様として受け入れ、案内文で伝える。
 
 ---
 
@@ -417,7 +442,7 @@ src/
       kiroku/              … page(K1) / gate-form(client) / actions / select(K2)
         [classId]/         … page(K3) / kiroku-header / record-card / copy-prompt-button(client)
     api/keepalive/route.ts … Vercel Cron
-    layout.tsx / globals.css
+    layout.tsx / globals.css / icon.svg（管理画面のファビコン）
   components/              … confirm-dialog / toast / yen / ui/form / nav/* / v2/*
   lib/
     attendance.ts          … getDayAttendance + 出欠型
@@ -427,6 +452,12 @@ src/
     kiroku/                … gate（合言葉・純粋モジュール）/ classes（anon のクラス一覧 + periodLabels）/ schedule（今月のよてい）
     supabase/              … server / client / anon / middleware / database.types
   middleware.ts
+public/
+  manifest.webmanifest     … 生徒向け PWA のマニフェスト（middleware の拡張子除外で素通し）
+  icons/                   … kiroku-icon.svg（原本）+ 生成 PNG 4種
+scripts/
+  verify-r2.mts            … R2 疎通確認（npm run verify:r2）
+  build-icons.mts          … アイコン生成（npm run icons）
 vercel.json                … cron 設定
 tailwind.config.ts         … デザイントークン
 ```

@@ -1,0 +1,41 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="512" height="512" viewBox="0 0 512 512">
+  <!--
+    生徒向け「ほほ笑みラボ 授業の記録」のアプリアイコン（チケット21）。
+    このファイルが唯一の原本。差し替えたら `npm run icons` で PNG を焼き直す。
+
+    設計上の約束:
+    - 地色は bg-accent-fill を既定アクセント #38bdf8 で固定したもの
+      （linear-gradient(135deg, #38bdf8, color-mix(in srgb, #38bdf8 55%, #000)) = #38bdf8 → #1f6888）。
+    - モチーフは中央80%の円（半径204.8）に収める。maskable でランチャーに丸く切られても欠けない。
+      同じ理由で **角丸は焼き込まない**（OS 側が自前で切る）。
+    - 絵文字は使わない。フォントに依存すると環境ごとに違う絵になる。
+    - sharp は librsvg で描くので <style>・CSS クラス・filter・mask・color-mix() は使えない。
+      プレゼンテーション属性だけで書くこと。
+  -->
+  <defs>
+    <linearGradient id="ground" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0" stop-color="#38bdf8"/>
+      <stop offset="1" stop-color="#1f6888"/>
+    </linearGradient>
+    <!-- トリコロール（DESIGN_v2 §2 のブランドモチーフ）。
+         同じ offset を2回置いて、グラデーションではなく3分割の帯にする。 -->
+    <linearGradient id="tricolor" x1="0" y1="0" x2="1" y2="0">
+      <stop offset="0" stop-color="#4fc3f7"/>
+      <stop offset="0.33" stop-color="#4fc3f7"/>
+      <stop offset="0.33" stop-color="#1e5bd6"/>
+      <stop offset="0.66" stop-color="#1e5bd6"/>
+      <stop offset="0.66" stop-color="#e11d48"/>
+      <stop offset="1" stop-color="#e11d48"/>
+    </linearGradient>
+  </defs>
+
+  <rect width="512" height="512" fill="url(#ground)"/>
+
+  <!-- 笑顔。ヘッダーの 😊 と揃える。全体を少し上に寄せてトリコロールとの重心を取る -->
+  <circle cx="196" cy="196" r="26" fill="#ffffff"/>
+  <circle cx="316" cy="196" r="26" fill="#ffffff"/>
+  <path d="M170 268 A 92 92 0 0 0 342 268" fill="none" stroke="#ffffff"
+        stroke-width="34" stroke-linecap="round"/>
+
+  <rect x="152" y="382" width="208" height="26" rx="13" fill="url(#tricolor)"/>
+</svg>
