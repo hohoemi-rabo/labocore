@@ -17,7 +17,7 @@
 - [x] r2.dev の公開アクセスを有効化し、公開 URL を控える
 - [x] R2 API トークン（**アカウント API トークン** / オブジェクト読み書き / バケット限定 / TTL 無期限 / IP 制限なし）を発行する
 - [x] 5変数を `.env.local` に設定する
-- [ ] **同じ5変数を Vercel（Production）に設定する** ← 本番デプロイ前に必要
+- [x] 同じ5変数を Vercel（Production）に設定する（2026-08-16・`vercel env add` で登録。Sensitive 扱い）
 - [x] `npm run verify:r2` で疎通確認する（2026-08-16・全8ステップ成功）
 
 ## Todo
