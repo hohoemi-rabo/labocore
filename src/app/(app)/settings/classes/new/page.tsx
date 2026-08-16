@@ -1,8 +1,20 @@
 import Link from "next/link";
+import { createClient } from "@/lib/supabase/server";
 import { ClassForm } from "../class-form";
 import { createClass } from "../actions";
 
-export default function NewClassPage() {
+export default async function NewClassPage() {
+  // 既に使われている色を渡し、新しいコマには未使用の色を既定で選ばせる。
+  const supabase = await createClient();
+  const { data: classes } = await supabase
+    .from("classes")
+    .select("name, theme_color")
+    .eq("is_active", true);
+
+  const usedColors = Object.fromEntries(
+    (classes ?? []).map((c) => [c.theme_color.toLowerCase(), c.name]),
+  );
+
   return (
     <div className="flex max-w-[520px] flex-col gap-6">
       <Link href="/settings/classes" className="text-[14px] text-ink-muted-48">
@@ -13,7 +25,11 @@ export default function NewClassPage() {
         コマを追加
       </h1>
 
-      <ClassForm action={createClass} submitLabel="追加する" />
+      <ClassForm
+        action={createClass}
+        submitLabel="追加する"
+        usedColors={usedColors}
+      />
     </div>
   );
 }

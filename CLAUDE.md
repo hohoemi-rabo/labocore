@@ -106,7 +106,9 @@ LaboCore（ラボコア）— シニア向けパソコン・スマホ教室「�
 - **管理側**: ナビに「記録」を追加し `/records` 配下に集約（記録カード CRUD・`next-lessons`・`announcements`）。**新設管理画面（16〜18）は最初から v2 デザインで実装する**（v1 シェルとの混在は画面単位として許容。ページ側でフルブリードのダーク面 `v2CanvasClass` を敷く）
 - **v2 画面のフォーム（16 で確立）**: `<form action={formAction}>` を**使わない**。React 19 は action が throw せずに返ると**非制御フィールドを自動リセット**するため、`{fieldErrors}` を返すと入力が全部消える。`startTransition(() => formAction(fd))` の手動 dispatch にする（送信ボタンは `type="button"` + `form.reportValidity()`）。前例は `src/app/(app)/records/record-form.tsx`
 - **写真を扱うフォーム**: ファイル入力に `name` を付けない（原寸が FormData に入る経路を作らない）。`shrinkImageInBrowser` で縮小した File だけを `append` し、**合計バイト数をクライアントで検査**する（Vercel の 413 は Server Action に到達しないため捕捉できない）。共通定数は `src/lib/records.ts`（`"use server"` からは非 async を export できない）
-- **共通ヘルパ**: `src/lib/form.ts` の `toFieldErrors` / `nullIfEmpty` を使う（各 actions.ts に再定義しない）
+- **共通ヘルパ**: `src/lib/form.ts` の `toFieldErrors` / `nullIfEmpty`、`src/lib/revalidate.ts` の `revalidateRecords()` / `revalidateClasses()` を使う（各 actions.ts に再定義しない）。**`revalidatePath` の第2引数は `"layout"`**。既定の `"page"` はそのパスだけが対象で配下ルートを含まない
+- **1画面に複数フォームを置くとき（17 で確立）**: 入力を**制御コンポーネント**にし、サーバー値の署名が変わったときだけ追従させる（React の「レンダー中に state を調整する」パターン）。非制御だと、クリア操作で「触った欄は古い値が残り、触っていない欄だけ消える」（HTML の dirty value flag）。カードの `key` は**行の id 固定**（可変値を混ぜると再マウントして入力が飛ぶ）。並び順も保存で変わらない列を使う。前例は `src/app/(app)/records/next-lessons/`
+- **トーストは画面に1つ**。`position: fixed` なので行ごとに持つと重なる
 - **画像**（15 で実装済み）: **ブラウザで縮小 → Server Action → サーバーで再変換 → R2** の二段構え。
   - **`src/lib/image-client.ts` の `shrinkImageInBrowser(file)`（長辺2000px）を送信前に必ず通す。** **Vercel のリクエストボディ上限は 4.5MB** でプラットフォーム側が 413 を返すため、`serverActions.bodySizeLimit` では超えられない（4mb 設定）。省くとローカルでは動いて本番だけ壊れる。HEIC 対策も兼ねる（sharp は HEIC を読めないが、canvas を通せば扱える形式になる）
   - `src/lib/image.ts` の `processImage(buffer, { maxEdge, quality })` で長辺 1200px（AI 送信用は `AI_MAX_EDGE`=768）+WebP 化 → `src/lib/r2.ts` の `uploadImage` で R2 へ保存し、DB には**完全な公開 URL** を持つ

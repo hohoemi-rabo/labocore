@@ -1,13 +1,13 @@
 "use server";
 
 import { z } from "zod";
-import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
 import { createClient } from "@/lib/supabase/server";
 import { toFieldErrors, nullIfEmpty } from "@/lib/form";
 import { processImage } from "@/lib/image";
 import { deleteImage, uploadImage } from "@/lib/r2";
 import { MAX_PHOTOS } from "@/lib/records";
+import { revalidateRecords } from "@/lib/revalidate";
 
 const recordSchema = z.object({
   class_id: z.string().uuid("クラスを選んでください"),
@@ -28,13 +28,6 @@ export type RecordFormState = {
 const SAVE_FAILED = "保存に失敗しました。時間をおいて再度お試しください。";
 const DUPLICATE = "このクラスのこの日付には既に記録があります";
 const TOO_MANY_PHOTOS = `写真は${MAX_PHOTOS}枚までです`;
-
-// 記録の変更は生徒向けページの内容を変える。/kiroku 配下はまだ存在しないが（19/20 で実装）、
-// "layout" 指定なら配下すべてが対象になるので、ルートが増えてもここを直さずに済む。
-function revalidateRecords() {
-  revalidatePath("/records");
-  revalidatePath("/kiroku", "layout");
-}
 
 function parseForm(formData: FormData) {
   return recordSchema.safeParse({

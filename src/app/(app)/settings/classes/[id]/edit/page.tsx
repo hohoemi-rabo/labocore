@@ -20,6 +20,17 @@ export default async function EditClassPage({
 
   if (!cls) notFound();
 
+  // 重複の注意書き用。自分自身は除く（今の色のままなのに「重複」と言われないように）。
+  const { data: others } = await supabase
+    .from("classes")
+    .select("name, theme_color")
+    .eq("is_active", true)
+    .neq("id", id);
+
+  const usedColors = Object.fromEntries(
+    (others ?? []).map((c) => [c.theme_color.toLowerCase(), c.name]),
+  );
+
   return (
     <div className="flex max-w-[520px] flex-col gap-6">
       <Link href="/settings/classes" className="text-[14px] text-ink-muted-48">
@@ -33,12 +44,14 @@ export default async function EditClassPage({
       <ClassForm
         action={updateClass}
         submitLabel="保存する"
+        usedColors={usedColors}
         defaultValues={{
           id: cls.id,
           name: cls.name,
           weekday: cls.weekday,
           start_time: cls.start_time?.slice(0, 5),
           end_time: cls.end_time?.slice(0, 5),
+          theme_color: cls.theme_color,
         }}
       />
 

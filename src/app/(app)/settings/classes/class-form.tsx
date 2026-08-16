@@ -2,6 +2,7 @@
 
 import { useActionState } from "react";
 import { WEEKDAY_LABELS } from "@/lib/format";
+import { CLASS_THEME_COLORS, accentStyle } from "@/lib/accent";
 import { labelClass, inputClass, errorClass } from "@/components/ui/form";
 import type { ClassFormState } from "./actions";
 
@@ -16,18 +17,37 @@ export type ClassDefaultValues = {
   weekday?: number;
   start_time?: string;
   end_time?: string;
+  theme_color?: string;
 };
 
 export function ClassForm({
   action,
   submitLabel,
   defaultValues,
+  usedColors = {},
 }: {
   action: Action;
   submitLabel: string;
   defaultValues?: ClassDefaultValues;
+  /**
+   * 他の active コマが既に使っている色（自分自身は除く）。
+   * `色 → コマ名` で渡し、新規作成時の既定選択と重複の注意書きに使う。
+   */
+  usedColors?: Record<string, string>;
 }) {
   const [state, formAction, pending] = useActionState(action, {});
+
+  // DB 値が大文字で入っていてもパレットと突き合わせられるように揃える。
+  // 揃えないと defaultChecked がどれにも当たらず、ラジオが未選択のまま送信されてしまう。
+  const current = defaultValues?.theme_color?.toLowerCase();
+  const known = CLASS_THEME_COLORS.some((c) => c.value === current);
+
+  // 新規作成で既定色のままだと、水曜午後を足したときに水曜午前と同じ色になってしまう。
+  // まだ使われていない色を最初から選んでおく（全色埋まっていれば先頭に戻る）。
+  const defaultColor =
+    (known ? current : undefined) ??
+    CLASS_THEME_COLORS.find((c) => !usedColors[c.value])?.value ??
+    CLASS_THEME_COLORS[0].value;
 
   return (
     <form action={formAction} className="flex flex-col gap-5">
@@ -109,6 +129,55 @@ export function ClassForm({
           )}
         </div>
       </div>
+
+      <fieldset className="flex flex-col gap-2">
+        <legend className={labelClass}>テーマカラー</legend>
+        <p className="text-[14px] text-ink-muted-48">
+          生徒向けページで、このクラスの差し色になります。
+        </p>
+        <div className="flex flex-wrap gap-3">
+          {CLASS_THEME_COLORS.map((c) => {
+            return (
+              <label
+                key={c.value}
+                className="flex min-h-[44px] cursor-pointer items-center gap-2 rounded-pill border border-hairline px-4 has-[:checked]:border-primary has-[:checked]:bg-canvas-parchment"
+              >
+                <input
+                  type="radio"
+                  name="theme_color"
+                  value={c.value}
+                  defaultChecked={c.value === defaultColor}
+                  className="peer sr-only"
+                />
+                {/* 色は DB 由来の動的な値なのでクラス名に埋め込まず CSS 変数で注入する
+                    （DESIGN_v2 §9）。インライン hex は書かない。 */}
+                <span
+                  aria-hidden
+                  style={accentStyle(c.value)}
+                  className="h-5 w-5 rounded-pill bg-accent"
+                />
+                <span className="text-[14px] text-ink">{c.label}</span>
+                {/* 選択状態を色だけで表さない（色覚・モノクロ表示への配慮） */}
+                <span
+                  aria-hidden
+                  className="hidden text-[14px] font-semibold text-primary peer-checked:inline"
+                >
+                  ✓
+                </span>
+              </label>
+            );
+          })}
+        </div>
+        {/* 6色より多くコマが増えることもあるので、重複は禁止せず注意だけ出す */}
+        {usedColors[defaultColor] && (
+          <p className="text-[14px] text-ink-muted-48">
+            選択中の色は「{usedColors[defaultColor]}」でも使われています。
+          </p>
+        )}
+        {state.fieldErrors?.theme_color && (
+          <p className={errorClass}>{state.fieldErrors.theme_color}</p>
+        )}
+      </fieldset>
 
       {state.formError && <p className={errorClass}>{state.formError}</p>}
 
