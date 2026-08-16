@@ -48,6 +48,14 @@ NEXT_PUBLIC_SUPABASE_ANON_KEY=<anon (publishable) key>
 | `NEXT_PUBLIC_SUPABASE_URL` | Supabase プロジェクト URL | ✅ |
 | `NEXT_PUBLIC_SUPABASE_ANON_KEY` | anon（publishable）キー。データ保護は RLS が担う | ✅ |
 | `CRON_SECRET` | keepalive cron の認証用（[後述](#supabase-スリープ防止keepalive-cron)）。本番のみ必須で、ローカルでは未設定で良い | 本番のみ |
+| `R2_ACCOUNT_ID` | Cloudflare アカウント ID（[後述](#写真の保存先cloudflare-r2)） | 写真機能に必須 |
+| `R2_ACCESS_KEY_ID` | R2 API トークンのアクセスキー ID | 写真機能に必須 |
+| `R2_SECRET_ACCESS_KEY` | R2 API トークンのシークレット | 写真機能に必須 |
+| `R2_BUCKET` | バケット名（例 `labocore-kiroku`） | 写真機能に必須 |
+| `R2_PUBLIC_BASE_URL` | r2.dev の公開 URL（例 `https://pub-xxxx.r2.dev`） | 写真機能に必須 |
+
+> R2 の5変数が未設定でもアプリは起動し、写真を扱わない画面は通常どおり動く。
+> 写真のアップロード時にだけ「R2 の環境変数が未設定です」というエラーになる。
 
 ### 3. 開発サーバー
 
@@ -76,6 +84,7 @@ npm run dev
    - `NEXT_PUBLIC_SUPABASE_URL`
    - `NEXT_PUBLIC_SUPABASE_ANON_KEY`
    - `CRON_SECRET` — keepalive cron の認証用（[後述](#supabase-スリープ防止keepalive-cron)）
+   - `R2_*` の5変数 — 授業記録の写真用（[後述](#写真の保存先cloudflare-r2)）
    - ※ Supabase の2つはローカルの `.env.local` と同じ値。anon（publishable）キーはクライアントに露出する前提のキーで、データ保護は Supabase 側の RLS が担う
 3. デプロイ後、本番 URL の `/login` から管理者ユーザーでログインできることを確認する
 4. 以降は `main` への push で自動デプロイされる
@@ -117,7 +126,49 @@ curl -i https://<本番URL>/api/keepalive
 
 登録状況は Vercel Dashboard の **Settings → Cron Jobs** で確認できる（実行履歴もここに出る）。
 
-> 補足: RLS が `authenticated` 限定のため anon キーでの件数は 0 件になるが、クエリ自体は Postgres に到達するのでスリープ防止としては有効。
+> 補足: 件数が何件になるかは目的ではなく、クエリが Postgres に到達することが目的。
+
+## 写真の保存先（Cloudflare R2）
+
+授業記録の写真は **Cloudflare R2** に置く（無料枠 容量10GB・**配信の帯域課金なし**で、この規模では実質恒久無料）。
+アップロード時にサーバー側で**長辺1200px + WebP** に変換してから保存するため、数 MB のスマホ写真も数百 KB に収まる。
+
+### 1. バケットを作る
+
+1. Cloudflare Dashboard → **R2** → **Create bucket**（例: `labocore-kiroku`）
+2. 作成したバケット → **Settings** → **Public Development URL** を **Enable** にする
+3. 表示される `https://pub-xxxxxxxx.r2.dev` を控える（= `R2_PUBLIC_BASE_URL`）
+
+### 2. API トークンを発行する
+
+1. R2 のトップ → **Manage R2 API Tokens** → **Create API token**
+2. 権限は **Object Read & Write**、対象は上で作ったバケットに絞る
+3. 発行された **Access Key ID** と **Secret Access Key** を控える（シークレットは再表示できない）
+4. アカウント ID は R2 のトップまたは Cloudflare Dashboard の URL から確認できる
+
+### 3. 環境変数を設定する
+
+`.env.local`（ローカル）と Vercel の **Settings → Environment Variables**（Production）の両方に設定する。
+
+```bash
+R2_ACCOUNT_ID=<Cloudflare アカウント ID>
+R2_ACCESS_KEY_ID=<Access Key ID>
+R2_SECRET_ACCESS_KEY=<Secret Access Key>
+R2_BUCKET=labocore-kiroku
+R2_PUBLIC_BASE_URL=https://pub-xxxxxxxx.r2.dev
+```
+
+### 4. 疎通確認
+
+```bash
+npm run verify:r2
+```
+
+「画像生成 → 変換 → アップロード → 公開 URL で取得 → 複製 → 削除 → 削除後404」を通しで確認する。
+バケットを作り直したとき・トークンを更新したとき・写真が表示されないときの切り分けにも使える。
+
+> 掲載前チェックの運用ルール: 写真は**画面・資料のみ**（顔・名前を写さない）。
+> メールアドレス等の写り込みも確認する。変換時に EXIF/GPS は自動で削除される。
 
 ## コマンド
 
