@@ -33,8 +33,9 @@ export async function GET(request: Request) {
   );
 
   // head:true + count:'exact' は行本体を転送しない最小のクエリ。
-  // RLS が authenticated 限定のため anon では件数が 0 になるが、
-  // クエリ自体は Postgres に到達するのでアクティビティとしては有効（ここが目的）。
+  // 件数が何件になるかは目的ではなく、クエリが Postgres に到達することが目的。
+  // （チケット14 で classes に anon SELECT ポリシーを足したため、件数は 0 ではなく
+  //   active なコマの件数になった。keepalive の動作には影響しない）
   const { error } = await supabase
     .from(KEEPALIVE_TABLE)
     .select("id", { head: true, count: "exact" });

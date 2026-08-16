@@ -50,7 +50,7 @@
   - `vercel.json` の `crons` で `/api/keepalive` を `0 3 * * *`（**UTC** = 12:00 JST）に1日1回実行。
   - Supabase は7日間無アクティビティで一時停止するため1日1回で十分（Hobby プランの cron 上限とも一致）。
   - `src/app/api/keepalive/route.ts`: `GET`・`export const dynamic = "force-dynamic"`。`Authorization: Bearer ${CRON_SECRET}` を検証（不一致 401、`CRON_SECRET` 未設定なら 500）。`classes` に `select("id", { head: true, count: "exact" })` の軽量クエリを投げ、成功で `{ ok: true, timestamp }`、失敗で 500 `{ ok: false }`。**200 を返すだけでは DB アクティビティにならない**ため実クエリ必須。
-  - cookie を持たない実行なので `@/lib/supabase/server.ts`（cookie 前提）ではなく `@supabase/supabase-js` の素の anon クライアントを使う。RLS により件数は 0 だがクエリは Postgres に到達する。
+  - cookie を持たない実行なので `@/lib/supabase/server.ts`（cookie 前提）ではなく `@supabase/supabase-js` の素の anon クライアントを使う。件数が何件かは目的ではなく、クエリが Postgres に到達することが目的。
   - `src/middleware.ts` の matcher で `/api/keepalive` を認証対象から除外済み（除外しないと未認証扱いで `/login` にリダイレクトされ機能しない）。
 - **残運用タスク**: Supabase Dashboard の漏洩パスワード保護（HaveIBeenPwned 照合）の有効化のみ（セキュリティアドバイザで WARN 1件）。パフォーマンスアドバイザは指摘ゼロ。
 
@@ -71,8 +71,13 @@
 | `end_time` | time | nullable |
 | `is_active` | bool | 既定 `true`（論理削除フラグ） |
 | `created_at` | timestamptz | 既定 `now()` |
+| `theme_color` | text | NOT NULL, 既定 `'#38bdf8'`, **CHECK 正規表現 `^#[0-9a-fA-F]{6}$`**（フェーズ2追加。生徒向け画面の差し色。`src/lib/accent.ts` の `accentStyle()` で CSS 変数 `--accent` に注入される） |
+| `next_lesson_date` | date | nullable（フェーズ2追加。次回のじゅぎょう） |
+| `next_lesson_theme` | text | nullable（同上） |
+| `next_lesson_note` | text | nullable（同上・持ち物メモ） |
 
 - インデックス: PK のみ。
+- 次回情報はクラスごとに常に1件のため専用テーブルを作らず `classes` に持たせている。
 
 ### 4.2 `students`（生徒台帳）
 
@@ -131,13 +136,59 @@
 - **UNIQUE(`student_id`, `target_month`)**。
 - インデックス: PK, UNIQUE(student_id, target_month), `idx_payments_target_month (target_month)`（月単独検索用）。
 
-### 4.6 参照整合性・RLS
+### 4.6 `lesson_records`（記録カード・フェーズ2）
+
+| 列 | 型 | 制約・既定 |
+|---|---|---|
+| `id` | uuid | PK |
+| `class_id` | uuid | NOT NULL, **FK → classes.id** |
+| `lesson_date` | date | NOT NULL |
+| `theme` | text | NOT NULL（テーマ＝カードの見出し） |
+| `memo` | text | NOT NULL（ひとことメモ） |
+| `prompt` | text | nullable（その日 AI に送った指示文・コピーボタン用） |
+| `image_urls` | text[] | NOT NULL 既定 `'{}'`, **CHECK `cardinality(image_urls) <= 2`**（R2 の公開 URL を完全な形で保存） |
+| `status` | text | NOT NULL 既定 `'draft'`, **CHECK in ('draft','published')** |
+| `created_at` / `updated_at` | timestamptz | 既定 `now()` |
+
+- **UNIQUE(`class_id`, `lesson_date`)** — 1クラス1日1件。
+- インデックス: PK, UNIQUE(class_id, lesson_date), `idx_lesson_records_class_date (class_id, lesson_date DESC)`。
+- 削除は**物理削除**（出欠・生徒と違い履歴を残す必要がないため）。
+- `updated_at` はトリガを置かず**アプリ側で `now()` をセット**する（既定値は INSERT 時にしか効かない）。
+
+### 4.7 `announcements`（教室からのお知らせ・フェーズ2）
+
+| 列 | 型 | 制約・既定 |
+|---|---|---|
+| `id` | uuid | PK |
+| `title` / `body` | text | NOT NULL |
+| `class_id` | uuid | nullable, **FK → classes.id**（**NULL = 全体向け**） |
+| `starts_on` / `ends_on` | date | NOT NULL（掲載期間）, **CHECK `starts_on <= ends_on`** |
+| `created_at` | timestamptz | 既定 `now()` |
+
+- インデックス: PK, `idx_announcements_ends_on (ends_on)`。
+- 掲載期間を過ぎたものは RLS で自動的に生徒向けから消えるため、消し忘れが事故にならない。
+
+### 4.8 参照整合性・RLS
 
 - 全 FK は **ON DELETE 指定なし（NO ACTION）**。生徒・コマは物理削除せず論理削除（`is_active=false`）運用のため、過去の出欠・請求履歴が守られる。
-- **RLS ポリシー（全5テーブル共通）**: 名前 `authenticated_all`・PERMISSIVE・ロール `authenticated`・コマンド `ALL`・条件 `(SELECT auth.uid()) IS NOT NULL`（USING / WITH CHECK とも）。
-  - = **認証済みユーザーは全操作可、anon は一切不可**。管理者1名運用のため所有者スコープ等は持たない。
+- **管理操作のポリシー（全7テーブル共通）**: 名前 `authenticated_all`・PERMISSIVE・ロール `authenticated`・コマンド `ALL`・条件 `(SELECT auth.uid()) IS NOT NULL`（USING / WITH CHECK とも）。
+  - 管理者1名運用のため所有者スコープ等は持たない。
   - `(SELECT auth.uid())` の initplan キャッシュパターンで記述（行ごとの関数呼び出しを避ける）。
-- 参考データ規模（本番・概数）: classes 5 / students 18 / attendance_records 85 / closed_days 4 / payments 13。10〜30人規模のためパフォーマンスチューニングは不要方針。
+- **anon 読み取りポリシー（フェーズ2・生徒向け `/kiroku` 用）**: `/kiroku` は Supabase Auth を使わず anon ロールで読むため、**RLS がそのままセキュリティ境界**になる。
+
+  | テーブル | ポリシー | 条件 |
+  |---|---|---|
+  | `classes` | `anon_select_active` | `is_active = true` |
+  | `closed_days` | `anon_select_all` | `true`（個人情報なし。ただし `reason` は生徒に見える自由記述） |
+  | `lesson_records` | `anon_select_published` | `status = 'published'`（下書きは DB レベルで見えない） |
+  | `announcements` | `anon_select_in_period` | `(now() AT TIME ZONE 'Asia/Tokyo')::date BETWEEN starts_on AND ends_on` |
+  | `students` / `attendance_records` / `payments` | **なし** | anon 向けポリシーが1本もない = RLS が全拒否 |
+
+  - 日付判定に `current_date` を**使わない**。DB のタイムゾーンは UTC のため、JST の 00:00〜09:00 に1日前を返し掲載期間が1日ずれる。
+  - ポリシーはロール `anon` 限定。PERMISSIVE は同一ロール内でのみ OR 合成されるため、`authenticated` の権限は変わらない。
+- **⚠️ GRANT について**: `public` スキーマの DEFAULT PRIVILEGES により、**新規テーブルには `anon` へ全権限（SELECT/INSERT/UPDATE/DELETE 等）が自動付与**される。anon を止めているのは GRANT ではなく **RLS だけ**。→ 新テーブルを作るときは `create table` と `enable row level security` を**必ず同一マイグレーションに入れる**（分けるとその間だけ anon から読み書き自由になる）。
+  - 補足: anon の DELETE は RLS で0行に絞られるため、PostgREST は **204 を返すが何も消えない**。ステータスコードだけで拒否判定をしないこと。
+- 参考データ規模（本番・概数）: classes 5 / students 18 / attendance_records 85 / closed_days 4 / payments 13 / lesson_records 0 / announcements 0。10〜30人規模のためパフォーマンスチューニングは不要方針。
 
 ---
 
@@ -330,7 +381,7 @@ tailwind.config.ts         … デザイントークン
 
 ## 13. フェーズ2に向けた拡張ポイント・注意
 
-- **新テーブル追加時**: RLS を必ず有効化し `authenticated_all` と同型のポリシーを付ける（未設定だと anon 遮断されず個人情報が露出）。適用後は `database.types.ts` を MCP `generate_typescript_types` で**再生成**。よく検索する列にはインデックスを付ける（例: 月キー単独検索は複合 UNIQUE では効かない → 専用インデックス。`idx_payments_target_month` が前例）。
+- **新テーブル追加時**: **`create table` と `enable row level security` + ポリシー付与を同一マイグレーションに入れる**。`public` の DEFAULT PRIVILEGES で新テーブルには anon の全権限が自動付与されるため、RLS を別マイグレーションに分けるとその間だけ anon から読み書き自由になる（§4.8 参照）。適用後は `database.types.ts` を MCP `generate_typescript_types` で**再生成**。よく検索する列にはインデックスを付ける（例: 月キー単独検索は複合 UNIQUE では効かない → 専用インデックス。`idx_payments_target_month` が前例）。
 - **新 API ルート**: middleware matcher は既定で全ルート保護。認証不要にする場合のみ `/api/keepalive` と同様に matcher から除外する。
 - **出欠・支払い以外の楽観的更新 UI**: `useOptimistic` + `useToast` + 「redirect せず `{error?}` を返す Server Action」の型（§9）を踏襲。
 - **集計系の新機能**: 集計テーブルを作らず、対象レコードを取得して JS 集約する方針（§5-4）。請求額は必ず `unit_price_at_time`（スナップショット）を合計し、`students.unit_price` を遡って使わない。

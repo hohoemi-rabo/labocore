@@ -14,6 +14,44 @@ export type Database = {
   }
   public: {
     Tables: {
+      announcements: {
+        Row: {
+          body: string
+          class_id: string | null
+          created_at: string
+          ends_on: string
+          id: string
+          starts_on: string
+          title: string
+        }
+        Insert: {
+          body: string
+          class_id?: string | null
+          created_at?: string
+          ends_on: string
+          id?: string
+          starts_on: string
+          title: string
+        }
+        Update: {
+          body?: string
+          class_id?: string | null
+          created_at?: string
+          ends_on?: string
+          id?: string
+          starts_on?: string
+          title?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "announcements_class_id_fkey"
+            columns: ["class_id"]
+            isOneToOne: false
+            referencedRelation: "classes"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       attendance_records: {
         Row: {
           created_at: string
@@ -59,7 +97,11 @@ export type Database = {
           id: string
           is_active: boolean
           name: string
+          next_lesson_date: string | null
+          next_lesson_note: string | null
+          next_lesson_theme: string | null
           start_time: string | null
+          theme_color: string
           weekday: number
         }
         Insert: {
@@ -68,7 +110,11 @@ export type Database = {
           id?: string
           is_active?: boolean
           name: string
+          next_lesson_date?: string | null
+          next_lesson_note?: string | null
+          next_lesson_theme?: string | null
           start_time?: string | null
+          theme_color?: string
           weekday: number
         }
         Update: {
@@ -77,7 +123,11 @@ export type Database = {
           id?: string
           is_active?: boolean
           name?: string
+          next_lesson_date?: string | null
+          next_lesson_note?: string | null
+          next_lesson_theme?: string | null
           start_time?: string | null
+          theme_color?: string
           weekday?: number
         }
         Relationships: []
@@ -99,6 +149,53 @@ export type Database = {
           reason?: string | null
         }
         Relationships: []
+      }
+      lesson_records: {
+        Row: {
+          class_id: string
+          created_at: string
+          id: string
+          image_urls: string[]
+          lesson_date: string
+          memo: string
+          prompt: string | null
+          status: string
+          theme: string
+          updated_at: string
+        }
+        Insert: {
+          class_id: string
+          created_at?: string
+          id?: string
+          image_urls?: string[]
+          lesson_date: string
+          memo: string
+          prompt?: string | null
+          status?: string
+          theme: string
+          updated_at?: string
+        }
+        Update: {
+          class_id?: string
+          created_at?: string
+          id?: string
+          image_urls?: string[]
+          lesson_date?: string
+          memo?: string
+          prompt?: string | null
+          status?: string
+          theme?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "lesson_records_class_id_fkey"
+            columns: ["class_id"]
+            isOneToOne: false
+            referencedRelation: "classes"
+            referencedColumns: ["id"]
+          },
+        ]
       }
       payments: {
         Row: {

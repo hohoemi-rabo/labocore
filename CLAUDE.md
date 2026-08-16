@@ -60,7 +60,7 @@ LaboCore（ラボコア）— シニア向けパソコン・スマホ教室「�
 ### keepalive cron（Supabase スリープ防止）
 
 - `src/app/api/keepalive/route.ts` — Vercel Cron（`vercel.json` の `0 3 * * *`・**UTC**）が1日1回叩く GET。`Authorization: Bearer ${CRON_SECRET}` を検証し、`classes` に `head:true`/`count:'exact'` の軽量クエリを投げる。**200 を返すだけでは DB アクティビティにならない**ため必ず実クエリを維持すること。
-- cookie を持たない実行なので `@/lib/supabase/server.ts` ではなく `@supabase/supabase-js` の素の anon クライアントを使う。RLS により件数は 0 になるがクエリは Postgres に到達するので目的は達成される。
+- cookie を持たない実行なので `@/lib/supabase/server.ts` ではなく `@supabase/supabase-js` の素の anon クライアントを使う。件数が何件かは目的ではなく、クエリが Postgres に到達することが目的（チケット14 で `classes` に anon SELECT ポリシーを足したため件数は 0 ではなくなった）。
 - `src/middleware.ts` の matcher で `/api/keepalive` を除外済み。**新しい API ルートを足すときは既定で保護されたまま**にし、認証不要にする場合のみ同様に除外する。
 - 本番で稼働確認済み（認証なし → 401 / 認証あり → 200 `{ok:true}`、Vercel Dashboard の Settings → Cron Jobs に登録済み）。実行履歴と失敗の調査は同画面から行う。
 
