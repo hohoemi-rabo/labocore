@@ -41,6 +41,16 @@ export const weekdayOf = (date: string) => {
   return new Date(Date.UTC(y, m - 1, d)).getUTCDay();
 };
 
+// "2026-08-16" を N 日ずらす。カレンダー日付なので UTC 基準で tz 非依存に算出する
+// （weekdayOf / shiftMonth と同じ流儀）。Date.UTC が月末・年末の繰り上がりを処理する。
+export const addDays = (date: string, days: number) => {
+  const [y, m, d] = date.split("-").map(Number);
+  const t = new Date(Date.UTC(y, m - 1, d + days));
+  return `${t.getUTCFullYear()}-${String(t.getUTCMonth() + 1).padStart(2, "0")}-${String(
+    t.getUTCDate(),
+  ).padStart(2, "0")}`;
+};
+
 // "2026-07-22" → "7月22日（水）"
 export const formatDateWithWeekday = (date: string) => {
   const [, m, d] = date.split("-").map(Number);
