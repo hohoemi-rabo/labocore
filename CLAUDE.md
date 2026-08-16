@@ -14,6 +14,8 @@ LaboCore（ラボコア）— シニア向けパソコン・スマホ教室「�
 
 **フェーズ1（チケット 01〜12）は実装完了し、本番運用中**。URL は https://labocore.vercel.app（Vercel・GitHub 連携で `main` push により自動デプロイ）。8画面（今日の出欠 / カレンダー / 月次集計 / 生徒・コマ・休講日管理 / 生徒詳細 / ログイン）が稼働し、Supabase スリープ防止の keepalive cron も稼働中（下記）。残る運用者タスクは Supabase Dashboard での漏洩パスワード保護の有効化のみ。既存コードで確立済みの構成・規約は「ディレクトリ構成と実装パターン」を参照し、フェーズ2の新規実装もそれに合わせる。
 
+**フェーズ2「授業記録」はチケット 13〜28 に分割済み・実装未着手（13 から着手する）**。横断的な確定事項は下記「フェーズ2の実装方針」を参照。
+
 ## チケット運用（docs/）
 
 実装タスクは `docs/` 配下の連番チケットで管理する（`01`〜`12` = フェーズ1・完了 / `13`〜`28` = フェーズ2）。
@@ -93,6 +95,19 @@ LaboCore（ラボコア）— シニア向けパソコン・スマホ教室「�
 - `src/app/(app)/attendance-board.tsx`（`useOptimistic`+`useTransition`+`useToast` の中心）/ `attendance-toggle.tsx`（出席｜欠席の2セグメント pill）/ `add-student.tsx`（別日来訪の追加）。`doneLabel`/`addLabel` で文言を差し替えて再利用する。
 - `src/app/(app)/summary/` — 月次集計。`setPayment` も同じ「redirect せず `{ error? }`・楽観的更新」パターン（`payments` を `onConflict: "student_id,target_month"` で upsert）。集計は `attendance_records` を月範囲取得し **JS 集約**（`unit_price_at_time` を合計＝スナップショット）。
 
+## フェーズ2の実装方針（チケット 13〜28 分割時に確定済み）
+
+機能要件は REQUIREMENTS_phase2.md、デザインは DESIGN_v2.md + `docs/design-sample.html`（見た目の正典）。以下はチケット分割時のヒアリングで確定した横断事項（詳細は各チケット）。
+
+- **マイルストーン**: M1=13〜21（生徒向け `/kiroku` 一式+管理入力。ここで先行お披露目）/ M2=22〜23（Gemini AI 下書き・他クラスコピー）/ M3=24〜28（既存管理画面の v2 刷新・v1 撤去）。13→14→15 は並行可
+- **サイト名**: 「ほほ笑みラボ 授業の記録」で確定。合言葉は「ほほえみ」= env `KIROKU_PASSWORD`（httpOnly Cookie・有効期限1年目安）。PWA アイコンは実装時にデザインシステム準拠で作成（後日差し替え可）
+- **ルーティング**: `(kiroku)` route group・全ページ noindex。`/kiroku`（合言葉）→ `/kiroku/select`（クラスえらび）→ `/kiroku/[classId]`（クラスページ）。middleware は `/kiroku` 配下を Supabase Auth 対象から外し**合言葉 Cookie で判定**する（`/api/keepalive` 除外を壊さないこと）。タブ切替では「自分のクラス」の記憶 Cookie を変更しない（選び直しはフッター導線）
+- **anon RLS**: `lesson_records` は published のみ / `announcements` は掲載期間内のみ（日付判定は `(now() AT TIME ZONE 'Asia/Tokyo')::date`。UTC の `current_date` を使わない）/ `classes` は is_active / `closed_days` は全行。**students・attendance_records・payments の anon 完全遮断は変更しない**
+- **管理側**: ナビに「記録」を追加し `/records` 配下に集約（記録カード CRUD・`next-lessons`・`announcements`）。**新設管理画面（16〜18）は最初から v2 デザインで実装する**（v1 シェルとの混在は画面単位として許容。ページ側でフルブリードのダーク面を敷く。月次集計ヒーローの `-mx-4 -mt-6 md:-mx-8` が前例）
+- **画像**: Cloudflare R2（env: `R2_ACCOUNT_ID` / `R2_ACCESS_KEY_ID` / `R2_SECRET_ACCESS_KEY` / `R2_BUCKET` / `R2_PUBLIC_BASE_URL`）。sharp で長辺 1200px+WebP 化してから保存し、DB には**完全な公開 URL** を持つ。Server Action の `bodySizeLimit` 引き上げが必要（既定 1MB では不足）。削除はベストエフォート。他クラスコピー（23）は R2 オブジェクトごと複製する
+- **AI 下書き**: Gemini Flash 系・無料枠運用。env `GEMINI_API_KEY` / `GEMINI_MODEL`（モデル ID のハードコード禁止・env で世代交代）。送信前に画像縮小、出力は必ず人が確認して公開、API 障害時も手動入力で完結できること。個人情報を含む素材を AI に送らない
+- **M3 の段階刷新**: 画面単位で v2 へ置き換え・**1画面内の新旧混在は禁止**。シェル刷新（24）後、未刷新画面は暫定白面ラッパーで可読性を維持し 25〜27 で順次外す。28 で v1 トークン撤去・`DESIGN_v2.md` → `DESIGN.md` リネーム・SPEC.md / CLAUDE.md をフェーズ2 as-built に同期
+
 ## Next.js 15 App Router ベストプラクティス
 
 （Context7 経由で取得した Next.js 15 公式ドキュメントに基づく。本プロジェクトは 15.5.21）
@@ -123,11 +138,24 @@ LaboCore（ラボコア）— シニア向けパソコン・スマホ教室「�
 - 月次集計は集計テーブルを持たず、毎回導出する。PostgREST は任意の GROUP BY を組めないため、対象レコードを取得して **JS で月別集約**する（07 生徒詳細で確立。09/11 も同方式。月キーは `lesson_date.slice(0,7)`）
 - 認証は Supabase Auth の管理者1名のみ。新規登録画面は作らない。生徒の個人情報を扱うため、全テーブルで RLS（認証済みユーザーのみ全操作可）を必ず有効化する
 
-## デザインの絶対ルール（詳細は DESIGN.md）
+## デザインルール
 
-- アクセントは Action Blue `#0066cc` の1色のみ。赤・緑などのセマンティックカラー禁止。出欠は「出席=Action Blue 塗りピル / 欠席=ink 塗りピル / 未記録=ゴーストピル」で表現する
-- box-shadow・グラデーション禁止。階層は面の色の切り替え（白 ↔ `#f5f5f7` ↔ ダークタイル）と 1px ヘアラインで作る
-- 角丸は 8px（ユーティリティ）/ 18px（カード）/ pill（アクション）の3値のみ
-- 数字・金額は `tabular-nums` 必須。フォントウェイトは 400 / 600 のみ、本文は 17px
-- カラーは DESIGN.md のトークンを `tailwind.config.ts` に登録して使い、インライン hex を書かない
-- タップ要素は `active:scale-95`・最小 44×44px。出欠タップは楽観的更新（即時反映 → 失敗時トースト+ロールバック）
+**フェーズ2以降の新規・刷新画面は DESIGN_v2.md が正典**。v1 ルールは **M3 完了までの未刷新フェーズ1画面を保守するときのみ**適用する（1画面内の新旧混在は禁止・画面単位の混在は移行期間中のみ許容）。
+
+### 両世代共通の不変ルール
+
+- タップ要素は最小 44×44px・`active:scale-95`。出欠タップ等は楽観的更新（即時反映 → 失敗時トースト+ロールバック）
+- 本文は 17px 基準・16px 以下の本文禁止。数字・金額・日付は `tabular-nums` 必須
+- カラー・影・角丸はトークンを `tailwind.config.ts` の `theme.extend` に登録して使い、**インライン hex 禁止**
+- レスポンシブ（375px〜）
+
+### v2（DESIGN_v2.md — 新規/刷新画面）
+
+- ダーク基調 `#0b0d12` + クラス別アクセント。DB の `classes.theme_color` を CSS 変数 `--accent` として style 属性で注入し、Tailwind は `var(--accent)` 参照ユーティリティを使う（動的 hex をクラス名に埋め込まない）。濃色端は `color-mix(in srgb, var(--accent) 55%, #000)` で導出
+- 影・グラデーションは DESIGN_v2 §4 のレシピ内のみ（レシピ外の新造禁止）。角丸は 12/14/16/20/26/999 の段階制
+- 役割色は固定: お知らせ=琥珀 / プロンプト=紫 / 休み・エラー=ローズ / 完了=緑。役割外への流用禁止
+- フォントは Noto Sans JP 400/500/700/900。管理画面の基本アクセントはスカイ `#38bdf8` 固定・生徒向けは選択中クラスの色
+
+### v1（DESIGN.md — 未刷新画面の保守のみ）
+
+- アクセントは Action Blue `#0066cc` の1色のみ・セマンティックカラー禁止 / box-shadow・グラデーション禁止（階層は面の色替え+1px ヘアライン）/ 角丸 8/18/pill の3値 / ウェイト 400/600 のみ
