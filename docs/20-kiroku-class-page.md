@@ -40,6 +40,7 @@
 - **記録カードから hover の浮き上がりを外した。** Tailwind 3.4 は `hoverOnlyWhenSupported` が既定オフで、タップすると hover が発火して貼り付く。記録カードは押せる要素ではない（DESIGN_v2 §6）。動かすのはタブ・コピーボタン・フッターだけ
 - **クラスタブは `prefetch={false}`。** 表示中の Link が全部プリフェッチを撃つと、`force-dynamic` なルートを1回の閲覧でクラス数ぶん余計に実行する
 - **コピーボタンには非 secure context 用のフォールバックが要る。** `navigator.clipboard` は `http://192.168.x.x` では **undefined** で、素直に呼ぶと TypeError で落ちる（実測確認済み）。`textarea` + `execCommand` に落とし、それも失敗したら ✅ を出さずに「コピーできませんでした。文字を長押しして選んでください。」を出す
+  - **実機（PC・スマホ）でコピーできることを確認済み（2026-08-17）。** 本番は https なので secure context になり、通常は clipboard API 側を通る。フォールバックは LAN IP で開発確認するとき用の保険
 - **`<pre>` に `font-jp` が必須。** Tailwind の preflight が `pre` に `fontFamily.mono` を当てるため、指定しないと日本語が等幅フォールバックで崩れる
 - 「午前/午後」を出すかの判定は `src/lib/kiroku/classes.ts` の `periodLabels()` に一本化した（クラスえらび K2 とクラスタブ K3 で表記がずれないように）
 

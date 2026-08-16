@@ -35,6 +35,10 @@ LaboCore（ラボコア）— シニア向けパソコン・スマホ教室「�
 - `npm run icons` — 生徒向けアイコンの PNG を原本 SVG から焼き直す（`public/icons/kiroku-icon.svg` → 4種）
 - テストフレームワークは未導入
 
+**⚠️ 本番でしか出ないバグがある。管理画面も本番で開いて確かめること。**
+チケット15/16 で入れた写真機能は、**本番で一度も動いていなかった**（`/records` 系が 500）。原因は Next のファイルトレースが `sharp` のネイティブバインディング（`@img/sharp-linux-x64` の `.node`）を取りこぼしていたこと。`next.config.ts` の `outputFileTracingIncludes` で明示的に含めて解消した（21 の後で発覚）。
+**ローカルの `npm start` は `node_modules` を直接見に行くので絶対に再現しない**し、ビルドも警告なしで通る。ネイティブモジュール（sharp 等）を足したら、**デプロイ後に本番でその画面を開く**か `vercel logs` を見るまで「動いた」と言わないこと。
+
 **⚠️ `npm run dev` を動かしたまま `npm run build` を実行しない。** `.next` に開発用と本番用の成果物が混ざり、`Failed to load chunk …` の実行時エラーになる。起きたら dev を止めて `rm -rf .next` してから起動し直す。
 
 ## 技術スタック・構成

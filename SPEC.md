@@ -31,6 +31,8 @@
 | テスト | フレームワーク未導入（フェーズ1では手動確認） |
 
 - npm スクリプト: `dev`（`next dev --turbopack`）/ `build`（`next build --turbopack`）/ `start` / `lint`（`eslint`）/ `verify:r2`（R2 疎通確認）/ `icons`（生徒向けアイコンの PNG 生成）。
+- `next.config.ts`: `experimental.serverActions.bodySizeLimit = "4mb"`（写真アップロード用・Vercel の実質上限 4.5MB に合わせる）/ `outputFileTracingIncludes` で `/records` 配下に `node_modules/@img/**` を明示的に含める。
+  - **⚠️ 後者が無いと本番で `/records` 系が 500 になる。** 既定のトレースは `@img/sharp-libvips-linux-x64`（共有ライブラリ）は拾うのに、**N-API バインディング本体の `@img/sharp-linux-x64`（`.node`）を取りこぼす**ため、`require("sharp")` が「Could not load the "sharp" module using the linux-x64 runtime」で失敗する。ローカルの `npm start` は `node_modules` を直接見るので再現せず、ビルドも成功する。
 - Supabase プロジェクト ref: `labocore = hjcctlwaabkogeybqlbi`。PostgREST 14.5 / Postgres。
 
 ### 環境変数
