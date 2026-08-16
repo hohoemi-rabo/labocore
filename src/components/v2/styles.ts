@@ -1,0 +1,65 @@
+// DESIGN_v2 の共通スタイル。既存の src/components/ui/form.ts と同じく
+// 「クラス文字列の定数を素の要素に当てる」流儀に合わせている
+// （タグを選べる・追加クラスを足せる・"use client" 境界を作らない）。
+//
+// 文字サイズは px で書く。サンプル docs/design-sample.html の rem 値は
+// root 17px 前提で書かれているが、本プロジェクトの root は 16px のままなので
+// DESIGN_v2 §5 の rem→px 換算表に従って変換する（html を 17px にしてはいけない）。
+
+// ── 面（キャンバス）─────────────────────────────────────────
+// v1 シェルの中でフルブリードのダーク面を敷く（管理画面 16〜18 用）。
+// `v2-canvas` は globals.css の body:has(.v2-canvas) が拾うマーカー。
+// min-h-screen は v1 の白い地色を見せないための暫定措置で、シェル刷新（24）後に外す。
+export const v2CanvasClass =
+  "v2-canvas -mx-4 -my-6 min-h-screen bg-ground bg-ambient px-4 py-6 font-jp text-[17px] leading-jp text-fg md:-mx-8 md:px-8";
+
+// 入口画面（合言葉・クラスえらび）の全面キャンバス。アンビエントは強めを使う。
+export const entryCanvasClass =
+  "v2-canvas flex min-h-screen items-center justify-center bg-ground bg-ambient-strong px-6 py-10 font-jp text-[17px] leading-jp text-fg";
+
+// ── カード ─────────────────────────────────────────────────
+/** 入口ボックス（合言葉・クラスえらび）。中央 460px・ガラス面 + blur + 大影 */
+export const entryBoxClass =
+  "w-full max-w-[460px] rounded-26 border border-line bg-glass px-7 py-9 text-center shadow-elev-3 backdrop-blur-[14px]";
+
+/** 汎用ガラスカード（今月のよてい等） */
+export const glassCardClass =
+  "rounded-20 border border-line bg-glass shadow-elev-1";
+
+/** 不透明カード（記録カード等の主要カード） */
+export const cardClass = "rounded-20 border border-line bg-card shadow-elev-2";
+
+/** アクセントカード（次回のじゅぎょう）。クラス色の縁 + 右上からのグロー */
+export const accentCardClass =
+  "rounded-20 border border-accent-line bg-card-accent shadow-elev-2";
+
+// ── テキスト ───────────────────────────────────────────────
+// eyebrow（DESIGN_v2 §5）。色は役割で固定する
+const eyebrowBase = "text-[12px] font-bold uppercase tracking-[.22em]";
+export const eyebrowClass = `${eyebrowBase} text-accent`;
+export const eyebrowNewsClass = `${eyebrowBase} text-news`;
+export const eyebrowPromptClass = `${eyebrowBase} text-prompt`;
+
+/** セクション見出し。右へフェードする 1px ラインを ::after で引く */
+export const sectionTitleClass =
+  "mb-4 flex items-center gap-3 text-[20px] font-black text-fg after:h-px after:flex-1 after:bg-fade-line after:content-['']";
+
+// ── ブランド ───────────────────────────────────────────────
+/** トリコロールバー（入口ボックス・フッター）。装飾なので aria-hidden を付けて使う */
+export const tricolorClass = "h-1 w-[76px] rounded-pill bg-tricolor";
+/** 同・ページ見出しの横に置く短い版 */
+export const tricolorSmClass = "h-1 w-14 rounded-pill bg-tricolor";
+
+// ── ボタン ─────────────────────────────────────────────────
+const buttonBase =
+  "flex min-h-[44px] items-center justify-center rounded-16 px-6 font-bold text-white transition active:translate-y-0 active:scale-95";
+
+/** 主要ボタン（生徒向け・クラス色で塗る） */
+export const accentButtonClass = `${buttonBase} bg-accent-fill text-[20px] shadow-glow-btn hover:-translate-y-0.5 hover:shadow-glow-btn-hover`;
+
+/** 主要ボタン（管理画面・スカイ固定。DESIGN_v2 §8） */
+export const skyButtonClass = `${buttonBase} bg-sky-fill text-[17px] shadow-glow-sky hover:-translate-y-0.5 hover:shadow-glow-sky-hover`;
+
+/** 日付ピル（記録カードの日付など。アクセント塗り + 色グロー） */
+export const datePillClass =
+  "inline-block rounded-pill bg-accent-fill px-4 py-0.5 text-[14px] font-bold tabular-nums text-white shadow-glow";

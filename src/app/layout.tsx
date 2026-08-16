@@ -9,10 +9,13 @@ const inter = Inter({
   display: "swap",
 });
 
-// 和文は Noto Sans JP。ウェイト梯子は 400/600 のみ（DESIGN.md §2）。
+// 和文は Noto Sans JP。v1 は 400/600（DESIGN.md §2）、v2 は 400/500/700/900
+// （DESIGN_v2.md §5）を使うため、weight を列挙せず**可変フォント**で読み込む。
+// 静的5ウェイトだと Noto Sans JP のサブセット 124 個 × 5 の @font-face が生成され、
+// フォント CSS が 469KB（gzip 165kB）に膨らむ。可変フォントなら 124KB（gzip 40kB）で
+// 100〜900 の全ウェイトをまかなえる（フェーズ1の2ウェイト構成より軽い）。
 // CJK はファイルが巨大なため preload は無効化する。
 const notoSansJP = Noto_Sans_JP({
-  weight: ["400", "600"],
   subsets: ["latin"],
   variable: "--font-noto-sans-jp",
   display: "swap",

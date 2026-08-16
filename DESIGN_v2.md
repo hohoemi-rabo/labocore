@@ -65,6 +65,35 @@
 | 休み・エラー(ローズ) | 文字 `#fda4af` / 面 `rgba(225,29,72,.12)` / 縁 `rgba(225,29,72,.35)` |
 | 完了(緑) | `#34d399→#059669`(コピー完了時のボタン) |
 
+### Tailwindトークン名の対応表(チケット13で確定)
+
+本章の名前はCSS変数名であり、Tailwindのキー名としてはそのまま使えないものがある。
+`tailwind.config.ts` では次の名前で登録済み。**実装ではこちらの名前を使う**。
+
+| 本章の名前 | Tailwindキー | クラス例 | 読み替えた理由 |
+|---|---|---|---|
+| `bg` | `ground` | `bg-ground` | `base` はTailwind既定の `text-base`(font-size)と衝突する |
+| `surface` / `surface-2` | 同左 | `bg-surface` / `bg-surface-2` | — |
+| `text` | `fg` | `text-fg` | `text-text` を避ける |
+| `text-body` | `fg-body` | `text-fg-body` | 同上 |
+| `sub` / `line` | 同左 | `text-sub` / `border-line` | — |
+| くぼんだ面 `rgba(0,0,0,.35)` | `sunken` | `bg-sunken` | 入力欄・preブロックの地 |
+| `--accent` | `accent` | `text-accent` / `border-accent` | — |
+| `--accent-soft` | `accent-soft` | `bg-accent-soft` | — |
+| 濃色端(55%) | `accent-deep` | `to-accent-deep` | — |
+| 次回カードの縁(45%) | `accent-line` | `border-accent-line` | — |
+| お知らせ(琥珀) | `news` / `news-line` / `news-body` | `text-news` | **役割名で登録する**。`amber`等の色名だとTailwind既定パレット(`text-amber-500`)と見分けがつかず「役割外への流用禁止」を守れない |
+| プロンプト(紫) | `prompt` / `prompt-line` / `prompt-pre` / `prompt-pre-line` | `text-prompt` | 同上(`violet`は使わない) |
+| 休み・エラー(ローズ) | `off` / `off-surface` / `off-line` | `text-off` | 同上(`rose`は使わない) |
+| 完了(緑) | `done` | `text-done` | 同上 |
+
+**命名の禁止事項**(Tailwindはユーティリティ接頭辞を複数セクションで共有する):
+
+- `colors` と `backgroundImage` で同名キーを作らない → 1つの `bg-*` が背景色と背景画像の両方を設定してしまう(このため面のグラデーションは `news-panel` / `prompt-panel` と別名にしている)
+- `colors` と `boxShadow` で同名キーを作らない → **色が勝ち、影のレシピが無効化される**
+- `colors` に `base` / `sm` / `lg` 等、`fontSize` と同名のキーを作らない
+- `accent` 系トークンに opacity modifier(`bg-accent-soft/50`)を使わない → Tailwindが色をパースできず、**CSSが1行も出力されずに黙って消える**。透明度は `color-mix` の % 側で表現する
+
 ### トリコロール(ブランドモチーフ)
 
 - `linear-gradient(90deg, #4fc3f7 0 33%, #1e5bd6 33% 66%, #e11d48 66% 100%)`
@@ -83,7 +112,8 @@
 | 木曜 | `#34d399` | エメラルド |
 | 金曜 | `#e879f9` | フクシア |
 
-- 新クラス追加時は上記と同じ「明るく彩度の高い、ダーク背景で映える」帯から選ぶ(コマ管理フォームの色選択はこのパレットを候補提示)
+- 新クラス追加時は上記と同じ「明るく彩度の高い、ダーク背景で映える」帯から選ぶ(コマ管理フォームの色選択はこのパレットを候補提示)。
+  パレットは **`src/lib/accent.ts` の `CLASS_THEME_COLORS`** が単一の情報源
 - 濃色端は必ず `color-mix(... 55%, #000)` で導出し、クラスごとに2色目を定義しない
 
 ## 4. 背景・面・立体感
@@ -116,12 +146,49 @@ background-attachment: fixed;
 | 色付きグロー | `0 8〜10px 20〜24px color-mix(in srgb, <色> 35〜45%, transparent)` | アクセント塗りの要素(ボタン・日付ピル・アクティブタブ) |
 | くぼみ | `0 2px 8px rgba(0,0,0,.4) inset` | 入力欄・preブロック |
 
+**サンプルの中間値はこの3段階に丸める**(チケット13で確定)。サンプルは部品ごとに
+`0 14px 34px`(お知らせ)・`0 18px 44px`(次回)・`0 12px 30px`(予定)・`0 10px 26px`(写真)と
+細かく振っているが、トークンを増やさず 小/中/大 のいずれかに寄せる。本書のラダー外の値を新造しない。
+
+Tailwindの `shadow-*` は box-shadow 全体を置換するため、
+**「落ち影+上端インセットハイライト」は合成済みトークンとして登録する**
+(`shadow-elev-2` = 中+ハイライト、`shadow-well-focus` = リング+くぼみ、など)。
+
 ## 5. タイポグラフィ
 
-- フォント: **Noto Sans JP**(400/500/700/900)。`next/font` で読み込み(CJKのpreloadは無効・v1踏襲)
-- ベース: `html { font-size: 17px }`、`line-height: 1.85`(カード本文)
+- フォント: **Noto Sans JP**(400/500/700/900)。`next/font` で読み込み(CJKのpreloadは無効・v1踏襲)。
+  ウェイトを列挙せず**可変フォント**で読み込む(静的5ウェイトだとサブセット124個×5の
+  `@font-face` が生成されフォントCSSが469KBになる。可変なら124KBで100〜900をまかなえる)
+- 行間: `line-height: 1.85`(カード本文) = Tailwind `leading-jp`
 - ウェイトの使い分け: 本文400 / 補助ラベル500 / 強調・ボタン700 / 見出し900
-- サイズの目安: ページ見出し1.35rem / カード見出し1.22rem / 次回テーマ1.4rem / 本文0.95〜1rem / キャプション0.8〜0.82rem
+- 数字・金額・日付は `tabular-nums`(v1踏襲)
+
+### ⚠️ `html { font-size: 17px }` は採用しない(チケット13で確定)
+
+本文17px基準は **`body` 側**で指定する(`globals.css` の既存ルールのまま)。
+`html` を17pxにすると rem 基準が変わり、Tailwindの spacing/サイズ体系(`p-4`・`h-11`・`max-w-*` 等)が
+**全画面で6.25%ずれる**。フェーズ1画面の破壊に直結するので触らない。
+
+その結果、**サンプル `docs/design-sample.html` の rem 値(root 17px前提)はそのまま使えない**。
+実装では次の換算表に従い **px で書く**(フェーズ1の `text-[17px]` 方式を踏襲。`fontSize` トークンは作らない)。
+
+| サンプル | 実装 | 用途 |
+|---|---|---|
+| `.68rem` | 12px | eyebrow |
+| `.78〜.82rem` | 13〜14px | クラスの時間帯・タブのsmall・キャプション・日付ピル・ヒント |
+| `.92〜1.02rem` | **17px** | 本文・lead・お知らせ本文・予定・メモ・pre・タブ・ブランド名 |
+| `1.05rem` | 18px | お知らせ見出し |
+| `1.12rem` | 19px | 次回の日付 |
+| `1.15〜1.2rem` | 20px | 主要ボタン・セクション見出し |
+| `1.22〜1.25rem` | 21px | 記録カード見出し・ブランドマーク |
+| `1.3rem` | 22px | クラスえらびの曜日 |
+| `1.35rem` | 23px | ページ見出し・合言葉入力 |
+| `1.4rem` | 24px | 次回のテーマ |
+| `1.5rem` | 26px | 入口ボックスの見出し |
+
+**サンプルからの意図的な逸脱**: サンプルの `.92〜.98rem` 本文は換算すると15.6〜16.7pxとなり、
+不変ルール「16px以下の本文禁止」(§0・§10)に反する。**本文はすべて17pxに引き上げる**。
+12〜14pxはキャプション・ラベル・eyebrowにのみ使う(本文ではないので可)。
 - **eyebrow(小見出し)**: `.68rem / 700 / letter-spacing .22em / uppercase / アクセント色`。「Next Lesson / 次回の授業」のように英語+日本語の併記スタイル
 - 数字・金額・日付は `tabular-nums`(v1踏襲)
 
@@ -129,14 +196,14 @@ background-attachment: fixed;
 
 ### 角丸スケール
 
-| 値 | 用途 |
-|---|---|
-| 12px | タブ・小要素・エラー帯 |
-| 14px | 写真フレーム |
-| 16px | 入力欄・主要ボタン・プロンプト枠 |
-| 20px | カード標準(`--radius`) |
-| 26px | 入口ボックス |
-| 999px | ピル(日付・コピーボタン・トリコロール) |
+| 値 | Tailwind | 用途 |
+|---|---|---|
+| 12px | `rounded-12` | タブ・小要素・エラー帯 |
+| 14px | `rounded-14` | 写真フレーム |
+| 16px | `rounded-16` | 入力欄・主要ボタン・プロンプト枠 |
+| 20px | `rounded-20` | カード標準(`--radius`) |
+| 26px | `rounded-26` | 入口ボックス |
+| 999px | `rounded-pill` | ピル(日付・コピーボタン・トリコロール) |
 
 ### モーション
 
@@ -177,10 +244,20 @@ background-attachment: fixed;
 
 ## 9. 実装ガイド
 
-- トークンは `tailwind.config.ts` の `theme.extend`(colors / borderRadius / boxShadow / backgroundImage)へ登録。**インラインhex禁止はv1から継続**
-- クラスカラーはDBの `classes.theme_color` を CSS変数 `--accent`(または要素ローカルの `--c`)として `style` 属性で注入し、Tailwind側は `var(--accent)` 参照のユーティリティを用意する(動的hexをクラス名に埋め込まない)
-- 濃色端・淡色面は `color-mix()` で導出する(全モダンブラウザ対応済み。らくらくスマホ系の古いブラウザで崩れないかはM1の実機確認項目)
+- トークンは `tailwind.config.ts` の `theme.extend`(colors / borderRadius / boxShadow / backgroundImage / fontFamily / lineHeight)へ登録。**インラインhex禁止はv1から継続**。名前は2章の対応表に従う
+- 共通スタイルは **`src/components/v2/styles.ts`**(面・カード・eyebrow・見出し・トリコロール・ボタン・日付ピル)と **`src/components/v2/form.ts`**(入力部品)にクラス文字列の定数として置く。v1の `src/components/ui/form.ts` と同じ流儀(素の要素に当てる・タグを選べる・`"use client"` 境界を作らない)
+- クラスカラーはDBの `classes.theme_color` を **`src/lib/accent.ts` の `accentStyle()`** 経由で CSS変数 `--accent` として `style` 属性に注入する(動的hexをクラス名に埋め込まない)。
+  **注入するのは `--accent` の1つだけ**。派生色(`accent-soft` / `accent-deep` / `accent-line` / 各グロー)は
+  トークンの値に `color-mix()` を直接書いてあるため、各要素が継承中の `--accent` に対して解決される。
+  サンプルの `--c`(タブ用の2本目の変数)は移植しない — `--accent` を要素ごとに上書きすれば足りる。
+  **中間のカスタムプロパティ(`:root { --accent-soft: color-mix(... var(--accent) ...) }`)を作ってはいけない**:
+  カスタムプロパティは宣言された要素で置換されるため、子孫での `--accent` 上書きが反映されない
+- 濃色端・淡色面は `color-mix()` で導出する(全モダンブラウザ対応済み。らくらくスマホ系の古いブラウザで崩れないかはM1の実機確認項目。非対応だと宣言ごと無効になるため、必要なら `@supports not (color: color-mix(in srgb, red, blue))` で一括フォールバックを当てる)
 - `backdrop-filter` はヘッダー・入口のみに限定(多用すると低スペック端末で重くなる)
+- **`background-attachment: fixed`(`bg-fixed`)は使わない**。iOS Safari で無視される/カクつくため、
+  アンビエント背景を全面に敷きたい場合は `fixed inset-0 -z-10` の背景要素を置く
+- ダーク画面には `v2-canvas` クラスを含むラッパー(`v2CanvasClass` / `entryCanvasClass`)を使う。
+  `globals.css` の `body:has(.v2-canvas)` が body の地色もダークにし、iOSのオーバースクロールで白がちらつくのを防ぐ
 - 影・グラデーションは4章のレシピ外の値を新造しない(増やしたくなったら本書を先に改訂する)
 
 ## 10. アクセシビリティ・禁止事項

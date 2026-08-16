@@ -3,10 +3,27 @@
 @tailwind utilities;
 
 @layer base {
+  :root {
+    /* DESIGN_v2 §2・§8: クラス別アクセントの既定値。
+       管理画面はこのスカイ固定、生徒向けは選択中クラスの theme_color を
+       style 属性（src/lib/accent.ts）で上書きする。 */
+    --accent: #38bdf8;
+  }
+
   body {
-    /* DESIGN.md §2・§3: 本文 17px / line-height 1.47 / antialiased / 背景 canvas */
+    /* DESIGN.md §2・§3: 本文 17px / line-height 1.47 / antialiased / 背景 canvas
+       ※ font-size は html ではなく body に置く。html を 17px にすると rem 基準が
+         変わり、Tailwind の spacing/サイズ体系（p-4・h-11 等）が全画面で 6% ずれる。
+         DESIGN_v2 §5 の `html { font-size: 17px }` はこの理由で採用しない。 */
     @apply bg-canvas text-ink font-sans antialiased;
     font-size: 17px;
     line-height: 1.47;
+  }
+
+  /* v2 のダーク画面（v2CanvasClass）が乗っているときだけ、body の地色もダークにする。
+     iOS のオーバースクロール時に白がちらつくのを防ぐ。
+     フェーズ1画面ではセレクタが一致しないため影響ゼロ。 */
+  body:has(.v2-canvas) {
+    @apply bg-ground;
   }
 }
