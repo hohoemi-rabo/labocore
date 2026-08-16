@@ -6,6 +6,7 @@
 
 - 機能要件・データモデル・画面構成は [`REQUIREMENTS.md`](./REQUIREMENTS.md)
 - デザインシステムは [`DESIGN.md`](./DESIGN.md)
+- **実装済み仕様（as-built）は [`SPEC.md`](./SPEC.md)** — DB スキーマ・RLS・画面・Server Action の現状
 - 実装タスクは [`docs/`](./docs) の連番チケット（番号順が推奨実装順）
 
 ## 主な機能（フェーズ1）
