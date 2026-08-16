@@ -53,6 +53,7 @@ NEXT_PUBLIC_SUPABASE_ANON_KEY=<anon (publishable) key>
 | `R2_SECRET_ACCESS_KEY` | R2 API トークンのシークレット | 写真機能に必須 |
 | `R2_BUCKET` | バケット名（例 `labocore-kiroku`） | 写真機能に必須 |
 | `R2_PUBLIC_BASE_URL` | r2.dev の公開 URL（例 `https://pub-xxxx.r2.dev`） | 写真機能に必須 |
+| `KIROKU_PASSWORD` | 生徒向けページの合言葉（「ほほえみ」）。**チケット19 で使用** | 生徒向けページに必須 |
 
 > R2 の5変数が未設定でもアプリは起動し、写真を扱わない画面は通常どおり動く。
 > 写真のアップロード時にだけ「R2 の環境変数が未設定です」というエラーになる。

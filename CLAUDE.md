@@ -10,11 +10,13 @@ LaboCore（ラボコア）— シニア向けパソコン・スマホ教室「�
 - **REQUIREMENTS_phase2.md** — フェーズ2「授業記録（じゅぎょうのきろく）」の機能要件の正典。フェーズ2実装前に必ず参照する
 - **DESIGN.md** — フェーズ1デザインシステム（v1）。**M3 完了まで未刷新のフェーズ1画面を保守するときのみ**参照する
 - **DESIGN_v2.md** — フェーズ2以降のデザイン正典（ダーク基調・クラスカラー）。見た目の正典は `docs/design-sample.html`。フェーズ2の新規画面・刷新画面はすべてこちらに従う
-- **SPEC.md** — フェーズ1の実装済み仕様書（as-built）。DB スキーマ・RLS・画面・Server Action・共通基盤の現状を一次情報と突き合わせて記述。フェーズ2の設計時にまず参照する
+- **SPEC.md** — 実装済み仕様書（as-built）。DB スキーマ・RLS・画面・Server Action・共通基盤の現状を一次情報と突き合わせて記述。**§4 の DB はフェーズ2分（`lesson_records` / `announcements` / `classes` の追加列 / anon ポリシー）まで同期済み**。設計時にまず参照する
 
-**フェーズ1（チケット 01〜12）は実装完了し、本番運用中**。URL は https://labocore.vercel.app（Vercel・GitHub 連携で `main` push により自動デプロイ）。8画面（今日の出欠 / カレンダー / 月次集計 / 生徒・コマ・休講日管理 / 生徒詳細 / ログイン）が稼働し、Supabase スリープ防止の keepalive cron も稼働中（下記）。残る運用者タスクは Supabase Dashboard での漏洩パスワード保護の有効化のみ。既存コードで確立済みの構成・規約は「ディレクトリ構成と実装パターン」を参照し、フェーズ2の新規実装もそれに合わせる。
+**フェーズ1（チケット 01〜12）は実装完了し、本番運用中**。URL は https://labocore.vercel.app（Vercel・GitHub 連携で `main` push により自動デプロイ）。8画面（今日の出欠 / カレンダー / 月次集計 / 生徒・コマ・休講日管理 / 生徒詳細 / ログイン）が稼働し、Supabase スリープ防止の keepalive cron も稼働中（下記）。
 
-**フェーズ2「授業記録」はチケット 13〜28 に分割済み・実装未着手（13 から着手する）**。横断的な確定事項は下記「フェーズ2の実装方針」を参照。
+**フェーズ2「授業記録」はチケット 13〜28 に分割済み。13〜18 が実装完了し、次は 19 から着手する。** 現状の詳細は下記「フェーズ2の現状」、横断的な確定事項は「フェーズ2の実装方針」を参照。
+
+**運用者タスクの状況**: R2 のバケット・トークン・env（ローカル + Vercel Production）は設定済み。残るのは (a) Supabase Dashboard での漏洩パスワード保護の有効化（フェーズ1からの積み残し・急ぎでない）、(b) **チケット19 で必要になる `KIROKU_PASSWORD`（合言葉「ほほえみ」）の env 設定**。
 
 ## チケット運用（docs/）
 
@@ -29,7 +31,10 @@ LaboCore（ラボコア）— シニア向けパソコン・スマホ教室「�
 - `npm run dev` — 開発サーバー起動（Turbopack）
 - `npm run build` — 本番ビルド（Turbopack）
 - `npm run lint` — ESLint 実行
+- `npm run verify:r2` — R2 の疎通確認（アップロード→取得→複製→削除→404 を通しで検査）
 - テストフレームワークは未導入
+
+**⚠️ `npm run dev` を動かしたまま `npm run build` を実行しない。** `.next` に開発用と本番用の成果物が混ざり、`Failed to load chunk …` の実行時エラーになる。起きたら dev を止めて `rm -rf .next` してから起動し直す。
 
 ## 技術スタック・構成
 
@@ -74,9 +79,10 @@ LaboCore（ラボコア）— シニア向けパソコン・スマホ教室「�
 1リソースにつき: `page.tsx`（一覧・Server Component）/ `actions.ts`（`'use server'`）/ `*-form.tsx`（`'use client'` の登録・編集共有フォーム）/ `new/page.tsx` / `[id]/edit/page.tsx`。
 
 - Server Action は Zod `safeParse` → 失敗時 `issue.path[0]` でフィールド別に集約して early return（`{ fieldErrors, formError }`）。成功時 `revalidatePath` → `redirect`。
-- フォームは `useActionState(action, {})`。非制御入力（`defaultValue`）なので検証エラー再表示でも入力値は保持される。
 - 任意テキストは保存前に空文字→null 化（`nullIfEmpty`）。
-- 削除は論理削除（`is_active=false`）＋ `src/components/confirm-dialog.tsx`（ネイティブ `<dialog>`・確定は ink 塗り）で確認必須。
+- 削除は論理削除（`is_active=false`）＋ 確認ダイアログ必須。v1 画面は `src/components/confirm-dialog.tsx`、**v2 画面は `src/components/v2/confirm-dialog.tsx`**。
+- **⚠️ フォームの送信方法は v1 画面と v2 画面で異なる**。v1 画面（未刷新のフェーズ1画面）は `<form action={formAction}>` + `useActionState(action, {})` の非制御入力。**v2 画面は手動 dispatch**（下記「フェーズ2の実装方針」）。
+  - v1 画面にも React 19 の「action が返ると非制御フィールドがリセットされる」問題は潜在的にあるが、`required` がほとんどを弾きサーバー側エラーが稀なので表面化していない。**チケット27 で v2 と同じ手動 dispatch に寄せる予定**（27 の Todo に記載済み）。
 
 ### 共有ユーティリティ / コンポーネント
 
@@ -94,6 +100,52 @@ LaboCore（ラボコア）— シニア向けパソコン・スマホ教室「�
 - `src/app/(app)/actions.ts` の `recordAttendance({ studentId, lessonDate, status })` — 出欠記録のインラインアクション（**redirect せず `{ error? }` を返す**＝楽観的更新用）。`status=null` で削除、それ以外は `unit_price_at_time` に**サーバで読んだ現在単価をスナップショット**して upsert（`onConflict: "student_id,lesson_date"`）。ホーム・カレンダーで共用。
 - `src/app/(app)/attendance-board.tsx`（`useOptimistic`+`useTransition`+`useToast` の中心）/ `attendance-toggle.tsx`（出席｜欠席の2セグメント pill）/ `add-student.tsx`（別日来訪の追加）。`doneLabel`/`addLabel` で文言を差し替えて再利用する。
 - `src/app/(app)/summary/` — 月次集計。`setPayment` も同じ「redirect せず `{ error? }`・楽観的更新」パターン（`payments` を `onConflict: "student_id,target_month"` で upsert）。集計は `attendance_records` を月範囲取得し **JS 集約**（`unit_price_at_time` を合計＝スナップショット）。
+
+## フェーズ2の現状（13〜18 実装済み・19 から着手）
+
+### 追加済みの DB（14）
+
+- `classes` に列追加: `theme_color`（NOT NULL 既定 `#38bdf8`・CHECK `^#[0-9a-fA-F]{6}$`・**小文字で保存**）/ `next_lesson_date` / `next_lesson_theme` / `next_lesson_note`
+- `lesson_records`（記録カード・`UNIQUE(class_id, lesson_date)`・`image_urls` は `cardinality <= 2` の CHECK・`status` は draft/published）
+- `announcements`（`class_id` NULL = 全体向け・`starts_on <= ends_on` の CHECK）
+- anon SELECT ポリシー: `classes`(is_active) / `closed_days`(全行) / `lesson_records`(published) / `announcements`(JST で掲載期間内)。**students・attendance_records・payments には付けない**
+- **⚠️ 新テーブルを足すときは `create table` と `enable row level security` を同一マイグレーションに入れる**。`public` の DEFAULT PRIVILEGES が anon に全権限を自動付与するため、分けるとその間だけ読み書き自由になる（SPEC.md §4.8）
+
+### 追加済みのライブラリ（13・15・16・17）
+
+| ファイル | 中身 |
+|---|---|
+| `src/lib/accent.ts` | `accentStyle(color)`（`--accent` を style 属性で注入）/ `CLASS_THEME_COLORS`（6色）/ `DEFAULT_ACCENT` |
+| `src/lib/form.ts` | `toFieldErrors` / `nullIfEmpty` |
+| `src/lib/revalidate.ts` | `revalidateRecords()` / `revalidateClasses()`（どちらも `"layout"` 指定） |
+| `src/lib/records.ts` | `MAX_PHOTOS`（サーバー・クライアント共用の定数置き場） |
+| `src/lib/image.ts` | `processImage` / `PUBLISH_MAX_EDGE`(1200) / `AI_MAX_EDGE`(768)（server-only） |
+| `src/lib/image-client.ts` | `shrinkImageInBrowser`（ブラウザ側の事前縮小） |
+| `src/lib/r2.ts` | `uploadImage` / `deleteImage` / `copyImage`（server-only） |
+| `src/lib/format.ts` | 既存に加え `addDays` を追加 |
+| `src/components/v2/styles.ts` | `v2CanvasClass` / `entryCanvasClass` / `entryBoxClass` / `glassCardClass` / `cardClass` / `accentCardClass` / `eyebrowClass`(+News/Prompt) / `sectionTitleClass` / `tricolorClass`(+Sm) / `accentButtonClass` / `skyButtonClass` / `datePillClass` |
+| `src/components/v2/form.ts` | `labelClass` / `inputClass` / `selectClass` / `textareaClass` / `errorClass` / `errorBandClass` |
+| `src/components/v2/confirm-dialog.tsx`・`toast.tsx` | v2 版（v1 版はダーク面で読めない。**v2 画面では必ず v2 版を import する**） |
+
+`scripts/verify-r2.mts`（`npm run verify:r2`）は R2 の疎通確認ツール（常設）。
+
+### 追加済みの画面（16〜18・すべて v2 デザイン）
+
+- `/records` — 記録カード一覧（日付順フラット + クラス絞り込みタブ + 下書き↔公開のインライン切替）
+- `/records/new`・`/records/[id]/edit` — `RecordForm` + `PhotoPicker`
+- `/records/next-lessons` — 全 active コマの「次回のじゅぎょう」をカード単位で編集
+- `/records/announcements`（+ `new`・`[id]/edit`）— 掲載中/掲載予定/期限切れの3セクション
+- ナビ（`src/components/nav/nav-items.ts`）に「記録」を追加済み
+- `src/app/(app)/records/layout.tsx` に `maxDuration = 60`
+
+### 19〜21（生徒向け `/kiroku`）で必ず踏まえること
+
+- **`/kiroku` 配下は `export const dynamic = "force-dynamic"` にする（18 からの申し送り・重要）。** 生徒向けは anon で読むため cookie クライアントを使わず、管理画面と違って**ルートキャッシュが効いてしまう**。お知らせの掲載期間・次回のじゅぎょうの過去日判定は時刻で状態が変わるのに、**日付をまたいでも何のミューテーションも起きないので `revalidatePath` が走らない**。そのままだと期限切れのお知らせが生徒に出続ける。DB を直接叩く確認では見つからない
+- **anon クライアントを共通化する**（`src/lib/supabase/anon.ts`）。現状は `src/app/api/keepalive/route.ts` が `@supabase/supabase-js` の素の anon クライアントを直に作っているので、そこを寄せる
+- **middleware**: `/kiroku` 配下を Supabase Auth の対象から外し、合言葉 Cookie で判定する。**`/api/keepalive` の除外を壊さないこと**
+- 次回カードは `next_lesson_date >= todayJst()` のときだけ出す（データは消さない仕様）
+- お知らせは「全体向け（`class_id IS NULL`）+ そのクラス向け」。**掲載期間の絞り込みは RLS がやるのでアプリ側では不要**
+- クラス色の**重複は許容される仕様**。タブ・クラスえらびは色だけでなくクラス名でも見分けられるようにする
 
 ## フェーズ2の実装方針（チケット 13〜28 分割時に確定済み）
 
@@ -160,10 +212,12 @@ LaboCore（ラボコア）— シニア向けパソコン・スマホ教室「�
 
 ### v2（DESIGN_v2.md — 新規/刷新画面）
 
-- ダーク基調 `#0b0d12` + クラス別アクセント。DB の `classes.theme_color` を CSS 変数 `--accent` として style 属性で注入し、Tailwind は `var(--accent)` 参照ユーティリティを使う（動的 hex をクラス名に埋め込まない）。濃色端は `color-mix(in srgb, var(--accent) 55%, #000)` で導出
+- ダーク基調 `#0b0d12` + クラス別アクセント。DB の `classes.theme_color` を **`accentStyle()`（`src/lib/accent.ts`）で CSS 変数 `--accent` に注入**し、Tailwind は `var(--accent)` 参照トークンを使う（動的 hex をクラス名に埋め込まない）。濃色端は `color-mix(in srgb, var(--accent) 55%, #000)` で導出
 - 影・グラデーションは DESIGN_v2 §4 のレシピ内のみ（レシピ外の新造禁止）。角丸は 12/14/16/20/26/999 の段階制
 - 役割色は固定: お知らせ=琥珀 / プロンプト=紫 / 休み・エラー=ローズ / 完了=緑。役割外への流用禁止
-- フォントは Noto Sans JP 400/500/700/900。管理画面の基本アクセントはスカイ `#38bdf8` 固定・生徒向けは選択中クラスの色
+- フォントは Noto Sans JP（**可変フォント**で読み込み済み）。管理画面の基本アクセントはスカイ `#38bdf8` 固定・生徒向けは選択中クラスの色
+- **トークン名は DESIGN_v2 §2 の対応表を見る**（仕様書の名前と Tailwind のキー名が一部異なる）。主なもの: 面 `bg-ground` / `bg-surface` / `bg-surface-2` / `bg-sunken`、文字 `text-fg` / `text-fg-body` / `text-sub`、枠 `border-line`、アクセント `accent` / `accent-soft` / `accent-deep` / `accent-line`、役割色は**色名ではなく役割名** `news` / `prompt` / `off` / `done`、影 `shadow-elev-1〜3` / `shadow-well` / `shadow-glow*`、塗り `bg-accent-fill` / `bg-sky-fill` / `bg-card` / `bg-glass` / `bg-tricolor`
+- **`accent` 系トークンに opacity modifier（`bg-accent-soft/50`）を使わない。** Tailwind が `color-mix()` をパースできず、**CSS が1行も出力されずに黙って消える**。透明度は `color-mix` の % 側で表現する
 
 ### v1（DESIGN.md — 未刷新画面の保守のみ）
 
