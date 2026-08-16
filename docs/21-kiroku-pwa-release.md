@@ -12,6 +12,8 @@
 
 - [ ] 生徒向けアイコンを作成する: デザインシステム準拠（アクセントグラデ地+モチーフ。トリコロール要素の活用を検討）。192/512/maskable/apple-touch-icon の各サイズ。**後日画像を差し替えられる構成**にする（サイト名は「ほほ笑みラボ 授業の記録」で確定済み）
 - [ ] Web マニフェスト: `name`「ほほ笑みラボ 授業の記録」・`start_url` `/kiroku`・`scope` `/kiroku`・`display: standalone`・`background_color`/`theme_color` #0b0d12。`(kiroku)` layout から `<link rel="manifest">` で参照（既存管理画面には影響させない）
+  - **⚠️ middleware の matcher は `.webmanifest` / `.json` を除外していない。** `/manifest.webmanifest` を素直に置くと `updateSession` に捕まり、未ログインの生徒は `/login` へ 307 されてインストールできない。`/kiroku/` 配下に置いて 19 で追加した合言葉ゲート分岐で通すか、matcher の除外リストに足すこと（`/api/keepalive` の除外を壊さないよう注意）
+  - **⚠️ `(kiroku)/layout.tsx` の `export const dynamic = "force-dynamic"` は配下の page には効くが route handler には効かない。** manifest を `route.ts` / `manifest.ts` で出すなら個別に指定する
 - [ ] iOS 用メタ（apple-touch-icon・apple-mobile-web-app 系）を `(kiroku)` layout に設定する
 - [ ] iPhone（Safari）/ Android（Chrome）で「ホーム画面に追加」を実機確認する（standalone 起動・アイコン・合言葉 Cookie が引き継がれること）
 - [ ] らくらくスマホ系など古めの端末で `color-mix` / `backdrop-filter` の表示を確認する（崩れる場合はフォールバックを検討・DESIGN_v2 §9 の確認項目）

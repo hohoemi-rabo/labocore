@@ -14,9 +14,9 @@ LaboCore（ラボコア）— シニア向けパソコン・スマホ教室「�
 
 **フェーズ1（チケット 01〜12）は実装完了し、本番運用中**。URL は https://labocore.vercel.app（Vercel・GitHub 連携で `main` push により自動デプロイ）。8画面（今日の出欠 / カレンダー / 月次集計 / 生徒・コマ・休講日管理 / 生徒詳細 / ログイン）が稼働し、Supabase スリープ防止の keepalive cron も稼働中（下記）。
 
-**フェーズ2「授業記録」はチケット 13〜28 に分割済み。13〜18 が実装完了し、次は 19 から着手する。** 現状の詳細は下記「フェーズ2の現状」、横断的な確定事項は「フェーズ2の実装方針」を参照。
+**フェーズ2「授業記録」はチケット 13〜28 に分割済み。13〜19 が実装完了し、次は 20 から着手する。** 現状の詳細は下記「フェーズ2の現状」、横断的な確定事項は「フェーズ2の実装方針」を参照。
 
-**運用者タスクの状況**: R2 のバケット・トークン・env（ローカル + Vercel Production）は設定済み。残るのは (a) Supabase Dashboard での漏洩パスワード保護の有効化（フェーズ1からの積み残し・急ぎでない）、(b) **チケット19 で必要になる `KIROKU_PASSWORD`（合言葉「ほほえみ」）の env 設定**。
+**運用者タスクの状況**: R2 のバケット・トークン・env（ローカル + Vercel Production）は設定済み。残るのは (a) Supabase Dashboard での漏洩パスワード保護の有効化（フェーズ1からの積み残し・急ぎでない）、(b) **`KIROKU_PASSWORD`（合言葉「ほほえみ」）を Vercel Production に登録する**（ローカルの `.env.local` は設定済み。**未登録のまま本番デプロイすると生徒向けページが fail-closed で開けない**）。
 
 ## チケット運用（docs/）
 
@@ -58,21 +58,29 @@ LaboCore（ラボコア）— シニア向けパソコン・スマホ教室「�
 
 - `server.ts` の `createClient()` — Server Component / Server Action 用（cookie ベース・`await` 必須）。
 - `client.ts` の `createClient()` — Client Component 用。
-- `middleware.ts` の `updateSession()` — `src/middleware.ts` から呼び全ルートを保護。`getClaims()` でセッション更新し未認証は `/login` へ。`getSession()` はサーバーで使わない。
+- `anon.ts` の `createAnonClient()` — **cookie を持たない文脈用**（keepalive cron・生徒向け `/kiroku`）。届く行は anon の RLS ポリシーが決める。ここで cookie クライアントを使ってはいけない。
+- `middleware.ts` の `updateSession()` — `src/middleware.ts` から呼び管理側ルートを保護。`getClaims()` でセッション更新し未認証は `/login` へ。`getSession()` はサーバーで使わない。**`/kiroku` 配下は `middleware.ts` 側で分岐して `updateSession` を呼ばない**（合言葉 Cookie で判定・下記「認証」）。
 - `database.types.ts` — MCP `generate_typescript_types` の出力。全クライアントに `<Database>` を適用。**スキーマ変更後は必ず再生成**する。
-- 接続情報は `.env.local`（gitignore 済み）の `NEXT_PUBLIC_SUPABASE_URL` / `NEXT_PUBLIC_SUPABASE_ANON_KEY`。Supabase プロジェクト ref: `labocore = hjcctlwaabkogeybqlbi`。`CRON_SECRET`（keepalive cron 用・下記）は本番のみで必要で、Vercel の Production に設定済み。ローカルには不要。
+- 接続情報は `.env.local`（gitignore 済み）の `NEXT_PUBLIC_SUPABASE_URL` / `NEXT_PUBLIC_SUPABASE_ANON_KEY`。Supabase プロジェクト ref: `labocore = hjcctlwaabkogeybqlbi`。`CRON_SECRET`（keepalive cron 用・下記）は本番のみで必要で、Vercel の Production に設定済み。ローカルには不要。`KIROKU_PASSWORD`（生徒向けの合言葉）はローカル・本番とも必要。
 
 ### keepalive cron（Supabase スリープ防止）
 
 - `src/app/api/keepalive/route.ts` — Vercel Cron（`vercel.json` の `0 3 * * *`・**UTC**）が1日1回叩く GET。`Authorization: Bearer ${CRON_SECRET}` を検証し、`classes` に `head:true`/`count:'exact'` の軽量クエリを投げる。**200 を返すだけでは DB アクティビティにならない**ため必ず実クエリを維持すること。
-- cookie を持たない実行なので `@/lib/supabase/server.ts` ではなく `@supabase/supabase-js` の素の anon クライアントを使う。件数が何件かは目的ではなく、クエリが Postgres に到達することが目的（チケット14 で `classes` に anon SELECT ポリシーを足したため件数は 0 ではなくなった）。
+- cookie を持たない実行なので `@/lib/supabase/server.ts` ではなく `createAnonClient()`（`src/lib/supabase/anon.ts`・生徒向け `/kiroku` と共用）を使う。件数が何件かは目的ではなく、クエリが Postgres に到達することが目的（チケット14 で `classes` に anon SELECT ポリシーを足したため件数は 0 ではなくなった）。
 - `src/middleware.ts` の matcher で `/api/keepalive` を除外済み。**新しい API ルートを足すときは既定で保護されたまま**にし、認証不要にする場合のみ同様に除外する。
 - 本番で稼働確認済み（認証なし → 401 / 認証あり → 200 `{ok:true}`、Vercel Dashboard の Settings → Cron Jobs に登録済み）。実行履歴と失敗の調査は同画面から行う。
 
 ### 認証
 
+認証は2系統ある。**管理側 = Supabase Auth / 生徒向け `/kiroku` = 合言葉 Cookie**。
+
 - middleware で全 `(app)` ルートを保護済み。ページ側で個別のリダイレクトは基本不要。
 - ログアウトは `src/lib/auth/actions.ts` の `signOut`。管理者は Supabase Dashboard で1名だけ作成（新規登録画面は作らない。手順は README）。
+- **生徒向け `/kiroku` の合言葉ゲート（19 で実装）**: `src/middleware.ts` が `/kiroku` 配下を分岐し、`updateSession` を呼ばずに Cookie で判定する。**`config.matcher` は変更していない**（`/api/keepalive` の除外を壊さないため）。
+  - `src/lib/kiroku/gate.ts` — Cookie 名・属性・トークン導出。**Edge の middleware と Node の Server Action の両方から import される純粋モジュール。`next/headers` も Supabase も持ち込まないこと**（middleware のバンドルが壊れる。`classes.ts` を middleware から import するのも不可）。ハッシュは Web Crypto（`require("crypto")` は Edge ビルドを壊す）。
+  - Cookie は `kiroku_gate`（合言葉の SHA-256 導出値）と `kiroku_class`（記憶クラス）の2本。どちらも httpOnly・`path=/kiroku`・`sameSite=lax`・`maxAge` 1年。**`cookies().delete()` は `path=/` で消しにいくのでこの Cookie には効かない。`set(name, "", { ...kirokuCookieOptions, maxAge: 0 })` を使う。**
+  - `KIROKU_PASSWORD` 未設定は fail-closed。合言葉画面自体は開くのでループしない。
+  - 行き先の判断（K1 / 記憶クラス / クラスえらび）は `/kiroku/page.tsx` だけが持つ。Server Action 側で計算しない。
 
 ### CRUD の型（05 コマ・06 生徒で確立。08 休講日等も踏襲）
 
@@ -111,11 +119,14 @@ LaboCore（ラボコア）— シニア向けパソコン・スマホ教室「�
 - anon SELECT ポリシー: `classes`(is_active) / `closed_days`(全行) / `lesson_records`(published) / `announcements`(JST で掲載期間内)。**students・attendance_records・payments には付けない**
 - **⚠️ 新テーブルを足すときは `create table` と `enable row level security` を同一マイグレーションに入れる**。`public` の DEFAULT PRIVILEGES が anon に全権限を自動付与するため、分けるとその間だけ読み書き自由になる（SPEC.md §4.8）
 
-### 追加済みのライブラリ（13・15・16・17）
+### 追加済みのライブラリ（13・15・16・17・19）
 
 | ファイル | 中身 |
 |---|---|
 | `src/lib/accent.ts` | `accentStyle(color)`（`--accent` を style 属性で注入）/ `CLASS_THEME_COLORS`（6色）/ `DEFAULT_ACCENT` |
+| `src/lib/supabase/anon.ts` | `createAnonClient()`（cookie を持たない文脈用・keepalive と `/kiroku` が共用） |
+| `src/lib/kiroku/gate.ts` | Cookie 名/属性 `kirokuCookieOptions` / `kirokuToken` / `isKirokuUnlocked` / `matchesKirokuPassword`。**純粋モジュール（Edge から import される）** |
+| `src/lib/kiroku/classes.ts` | `listActiveClasses()` / `findActiveClass()`（anon 経由・20 のクラスタブでも使う） |
 | `src/lib/form.ts` | `toFieldErrors` / `nullIfEmpty` |
 | `src/lib/revalidate.ts` | `revalidateRecords()` / `revalidateClasses()`（どちらも `"layout"` 指定） |
 | `src/lib/records.ts` | `MAX_PHOTOS`（サーバー・クライアント共用の定数置き場） |
@@ -123,13 +134,15 @@ LaboCore（ラボコア）— シニア向けパソコン・スマホ教室「�
 | `src/lib/image-client.ts` | `shrinkImageInBrowser`（ブラウザ側の事前縮小） |
 | `src/lib/r2.ts` | `uploadImage` / `deleteImage` / `copyImage`（server-only） |
 | `src/lib/format.ts` | 既存に加え `addDays` を追加 |
-| `src/components/v2/styles.ts` | `v2CanvasClass` / `entryCanvasClass` / `entryBoxClass` / `glassCardClass` / `cardClass` / `accentCardClass` / `eyebrowClass`(+News/Prompt) / `sectionTitleClass` / `tricolorClass`(+Sm) / `accentButtonClass` / `skyButtonClass` / `datePillClass` |
-| `src/components/v2/form.ts` | `labelClass` / `inputClass` / `selectClass` / `textareaClass` / `errorClass` / `errorBandClass` |
+| `src/components/v2/styles.ts` | `v2CanvasClass` / `entryCanvasClass` / `kirokuCanvasClass` / `entryBoxClass` / `glassCardClass` / `cardClass` / `accentCardClass` / `eyebrowClass`(+News/Prompt) / `sectionTitleClass` / `tricolorClass`(+Sm) / `accentButtonClass` / `skyButtonClass` / `entryButtonClass` / `datePillClass` |
+| `src/components/v2/form.ts` | `labelClass` / `inputClass` / `selectClass` / `textareaClass` / `entryInputClass` / `errorClass` / `errorBandClass` |
 | `src/components/v2/confirm-dialog.tsx`・`toast.tsx` | v2 版（v1 版はダーク面で読めない。**v2 画面では必ず v2 版を import する**） |
 
 `scripts/verify-r2.mts`（`npm run verify:r2`）は R2 の疎通確認ツール（常設）。
 
-### 追加済みの画面（16〜18・すべて v2 デザイン）
+### 追加済みの画面（16〜19・すべて v2 デザイン）
+
+管理側（16〜18）:
 
 - `/records` — 記録カード一覧（日付順フラット + クラス絞り込みタブ + 下書き↔公開のインライン切替）
 - `/records/new`・`/records/[id]/edit` — `RecordForm` + `PhotoPicker`
@@ -138,14 +151,22 @@ LaboCore（ラボコア）— シニア向けパソコン・スマホ教室「�
 - ナビ（`src/components/nav/nav-items.ts`）に「記録」を追加済み
 - `src/app/(app)/records/layout.tsx` に `maxDuration = 60`
 
-### 19〜21（生徒向け `/kiroku`）で必ず踏まえること
+生徒向け（19・`src/app/(kiroku)/`）:
 
-- **`/kiroku` 配下は `export const dynamic = "force-dynamic"` にする（18 からの申し送り・重要）。** 生徒向けは anon で読むため cookie クライアントを使わず、管理画面と違って**ルートキャッシュが効いてしまう**。お知らせの掲載期間・次回のじゅぎょうの過去日判定は時刻で状態が変わるのに、**日付をまたいでも何のミューテーションも起きないので `revalidatePath` が走らない**。そのままだと期限切れのお知らせが生徒に出続ける。DB を直接叩く確認では見つからない
-- **anon クライアントを共通化する**（`src/lib/supabase/anon.ts`）。現状は `src/app/api/keepalive/route.ts` が `@supabase/supabase-js` の素の anon クライアントを直に作っているので、そこを寄せる
-- **middleware**: `/kiroku` 配下を Supabase Auth の対象から外し、合言葉 Cookie で判定する。**`/api/keepalive` の除外を壊さないこと**
+- `/kiroku` — K1 合言葉。通過済みなら記憶クラス or クラスえらびへ振り分ける（判断はここだけが持つ）
+- `/kiroku/select` — K2 クラスえらび。**クライアント JS ゼロ**（素の `<form action>` + `<button name="class_id">`）
+- `/kiroku/[classId]` — K3。**19 では仮ページ。20 で本文だけ差し替える**（classId 検証・アクセント注入・「クラスをえらびなおす」フッターはそのまま使える）
+- `(kiroku)/layout.tsx` — `metadata`（`robots: noindex` / `title.template`）と `dynamic = "force-dynamic"` だけの pass-through。**面は各ページが `entryCanvasClass` / `kirokuCanvasClass` で敷く**
+
+### 20〜21（生徒向け `/kiroku` の続き）で必ず踏まえること
+
+19 で済んだこと: anon クライアントの共通化 / middleware の合言葉分岐 / `(kiroku)` layout と `force-dynamic`。
+
+- **`force-dynamic` は `(kiroku)/layout.tsx` の1か所で配下の page に効く**（18 からの申し送り。生徒向けは anon で読むため**ルートキャッシュが効いてしまい**、日付をまたいでも何のミューテーションも起きないので期限切れのお知らせが出続ける）。**⚠️ route handler には継承されない** — 21 で manifest を `route.ts` / `manifest.ts` で出すなら個別に指定する
+- **⚠️ middleware の matcher は `.webmanifest` / `.json` を除外していない。** `/manifest.webmanifest` を素直に置くと未ログインの生徒が `/login` へ飛ばされインストールできない（21 の Todo に記載済み）
 - 次回カードは `next_lesson_date >= todayJst()` のときだけ出す（データは消さない仕様）
 - お知らせは「全体向け（`class_id IS NULL`）+ そのクラス向け」。**掲載期間の絞り込みは RLS がやるのでアプリ側では不要**
-- クラス色の**重複は許容される仕様**。タブ・クラスえらびは色だけでなくクラス名でも見分けられるようにする
+- クラス色の**重複は許容される仕様**。色だけに頼らず見分けられるようにする。**クラスえらび（19）は「曜日＋（同曜日に2コマ以上あるときだけ午前/午後）＋時間帯」で、クラス名は出さない**（REQUIREMENTS_phase2 §7 K2 の「クラス名を併記」を上書きする決定。19 のチケットに理由あり）。20 のクラスタブも同じ表記に揃える
 
 ## フェーズ2の実装方針（チケット 13〜28 分割時に確定済み）
 
@@ -157,6 +178,8 @@ LaboCore（ラボコア）— シニア向けパソコン・スマホ教室「�
 - **anon RLS**: `lesson_records` は published のみ / `announcements` は掲載期間内のみ（日付判定は `(now() AT TIME ZONE 'Asia/Tokyo')::date`。UTC の `current_date` を使わない）/ `classes` は is_active / `closed_days` は全行。**students・attendance_records・payments の anon 完全遮断は変更しない**
 - **管理側**: ナビに「記録」を追加し `/records` 配下に集約（記録カード CRUD・`next-lessons`・`announcements`）。**新設管理画面（16〜18）は最初から v2 デザインで実装する**（v1 シェルとの混在は画面単位として許容。ページ側でフルブリードのダーク面 `v2CanvasClass` を敷く）
 - **v2 画面のフォーム（16 で確立）**: `<form action={formAction}>` を**使わない**。React 19 は action が throw せずに返ると**非制御フィールドを自動リセット**するため、`{fieldErrors}` を返すと入力が全部消える。`startTransition(() => formAction(fd))` の手動 dispatch にする（送信ボタンは `type="button"` + `form.reportValidity()`）。前例は `src/app/(app)/records/record-form.tsx`
+  - **⚠️ 入力欄が1つだけのフォームは `onSubmit` で `preventDefault` する（19 で判明）**。1つだと Enter で HTML の暗黙送信が起きるが、このパターンには `action` も submit ボタンも無いのでブラウザが素の GET を投げ、ページがリロードされてエラー表示が消える。欄が2つ以上あると暗黙送信が抑止されるため既存画面では発現していない。前例は `src/app/(kiroku)/kiroku/gate-form.tsx`
+  - **入力欄が無く action が必ず `redirect()` するフォームは、素の `<form action={serverAction}>` でよい**（リセットされる対象が無い）。クライアント JS がゼロになる。前例は `src/app/(kiroku)/kiroku/select/page.tsx`（押された `<button name="..." value="...">` は FormData に入る）
 - **写真を扱うフォーム**: ファイル入力に `name` を付けない（原寸が FormData に入る経路を作らない）。`shrinkImageInBrowser` で縮小した File だけを `append` し、**合計バイト数をクライアントで検査**する（Vercel の 413 は Server Action に到達しないため捕捉できない）。共通定数は `src/lib/records.ts`（`"use server"` からは非 async を export できない）
 - **共通ヘルパ**: `src/lib/form.ts` の `toFieldErrors` / `nullIfEmpty`、`src/lib/revalidate.ts` の `revalidateRecords()` / `revalidateClasses()` を使う（各 actions.ts に再定義しない）。**`revalidatePath` の第2引数は `"layout"`**。既定の `"page"` はそのパスだけが対象で配下ルートを含まない
 - **1画面に複数フォームを置くとき（17 で確立）**: 入力を**制御コンポーネント**にし、サーバー値の署名が変わったときだけ追従させる（React の「レンダー中に state を調整する」パターン）。非制御だと、クリア操作で「触った欄は古い値が残り、触っていない欄だけ消える」（HTML の dirty value flag）。カードの `key` は**行の id 固定**（可変値を混ぜると再マウントして入力が飛ぶ）。並び順も保存で変わらない列を使う。前例は `src/app/(app)/records/next-lessons/`
@@ -218,6 +241,7 @@ LaboCore（ラボコア）— シニア向けパソコン・スマホ教室「�
 - フォントは Noto Sans JP（**可変フォント**で読み込み済み）。管理画面の基本アクセントはスカイ `#38bdf8` 固定・生徒向けは選択中クラスの色
 - **トークン名は DESIGN_v2 §2 の対応表を見る**（仕様書の名前と Tailwind のキー名が一部異なる）。主なもの: 面 `bg-ground` / `bg-surface` / `bg-surface-2` / `bg-sunken`、文字 `text-fg` / `text-fg-body` / `text-sub`、枠 `border-line`、アクセント `accent` / `accent-soft` / `accent-deep` / `accent-line`、役割色は**色名ではなく役割名** `news` / `prompt` / `off` / `done`、影 `shadow-elev-1〜3` / `shadow-well` / `shadow-glow*`、塗り `bg-accent-fill` / `bg-sky-fill` / `bg-card` / `bg-glass` / `bg-tricolor`
 - **`accent` 系トークンに opacity modifier（`bg-accent-soft/50`）を使わない。** Tailwind が `color-mix()` をパースできず、**CSS が1行も出力されずに黙って消える**。透明度は `color-mix` の % 側で表現する
+- **同じプロパティのユーティリティを2つ並べない（19 で判明）。** `${inputClass} text-[23px]` のように後ろへ足しても勝つとは限らない（class 属性の並び順は無関係で、Tailwind が出力する CSS の順序で決まる）。`src/components/v2/{styles,form}.ts` の private な base（`fieldBase` / `buttonBase`）は**文字サイズを持たない**設計にしてあるので、別サイズが要る画面はそこから新しい定数を派生させる（`entryInputClass` / `entryButtonClass` が前例）
 
 ### v1（DESIGN.md — 未刷新画面の保守のみ）
 

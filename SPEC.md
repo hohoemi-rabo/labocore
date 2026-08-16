@@ -40,6 +40,7 @@
 | `NEXT_PUBLIC_SUPABASE_URL` | Supabase プロジェクト URL | ✅（ローカル/本番） |
 | `NEXT_PUBLIC_SUPABASE_ANON_KEY` | anon（publishable）キー。保護は RLS が担う | ✅（ローカル/本番） |
 | `CRON_SECRET` | keepalive cron の Bearer 認証用 | 本番のみ（Vercel Production に設定済み） |
+| `KIROKU_PASSWORD` | 生徒向けページ `/kiroku` の合言葉（「ほほえみ」）。未設定なら合言葉画面から先へ進めない（fail-closed） | ✅（ローカル/本番） |
 
 ---
 
@@ -50,7 +51,7 @@
   - `vercel.json` の `crons` で `/api/keepalive` を `0 3 * * *`（**UTC** = 12:00 JST）に1日1回実行。
   - Supabase は7日間無アクティビティで一時停止するため1日1回で十分（Hobby プランの cron 上限とも一致）。
   - `src/app/api/keepalive/route.ts`: `GET`・`export const dynamic = "force-dynamic"`。`Authorization: Bearer ${CRON_SECRET}` を検証（不一致 401、`CRON_SECRET` 未設定なら 500）。`classes` に `select("id", { head: true, count: "exact" })` の軽量クエリを投げ、成功で `{ ok: true, timestamp }`、失敗で 500 `{ ok: false }`。**200 を返すだけでは DB アクティビティにならない**ため実クエリ必須。
-  - cookie を持たない実行なので `@/lib/supabase/server.ts`（cookie 前提）ではなく `@supabase/supabase-js` の素の anon クライアントを使う。件数が何件かは目的ではなく、クエリが Postgres に到達することが目的。
+  - cookie を持たない実行なので `@/lib/supabase/server.ts`（cookie 前提）ではなく `src/lib/supabase/anon.ts` の `createAnonClient()`（生徒向け `/kiroku` と共用）を使う。件数が何件かは目的ではなく、クエリが Postgres に到達することが目的。
   - `src/middleware.ts` の matcher で `/api/keepalive` を認証対象から除外済み（除外しないと未認証扱いで `/login` にリダイレクトされ機能しない）。
 - **残運用タスク**: Supabase Dashboard の漏洩パスワード保護（HaveIBeenPwned 照合）の有効化のみ（セキュリティアドバイザで WARN 1件）。パフォーマンスアドバイザは指摘ゼロ。
 
@@ -208,8 +209,9 @@
 ## 6. 認証・認可
 
 - Supabase Auth（メール+パスワード）。**管理者1名を Supabase Dashboard で手動作成**（新規登録画面なし）。
-- **middleware で全ルートを保護**（`src/middleware.ts` → `src/lib/supabase/middleware.ts` の `updateSession`）:
+- **middleware で管理側の全ルートを保護**（`src/middleware.ts` → `src/lib/supabase/middleware.ts` の `updateSession`）:
   - matcher は静的ファイルと `/api/keepalive` を除外し、それ以外全ルートで実行。
+  - ただし `/kiroku` 配下だけは `middleware.ts` 側で分岐し、`updateSession` を呼ばずに合言葉 Cookie で判定する（下記「生徒向け `/kiroku` の合言葉ゲート」）。**matcher は変更していない**ため `/api/keepalive` の除外はそのまま。
   - `supabase.auth.getClaims()` でセッション更新。未認証で `/login` 以外 → `/login` へリダイレクト。認証済みで `/login` → `/` へ。
   - `createServerClient` と `getClaims()` の間にコードを挟まない（セッションがランダム失効する不具合回避）。`getSession()` はサーバーで使わない。
 - ログイン: `src/app/(auth)/login/actions.ts` の `login`。Zod 検証 → `signInWithPassword` → 失敗は**原因を伏せた汎用メッセージ**（列挙攻撃対策）→ 成功で `revalidatePath("/","layout")` → `redirect("/")`。
@@ -221,8 +223,29 @@
 |---|---|
 | `server.ts` `createClient()` | Server Component / Server Action 用（cookie ベース・`await` 必須） |
 | `client.ts` `createClient()` | Client Component 用 |
-| `middleware.ts` `updateSession()` | 全ルート保護・セッション更新 |
+| `anon.ts` `createAnonClient()` | cookie を持たない文脈用（keepalive cron・生徒向け `/kiroku`）。届く行は anon の RLS ポリシーが決める |
+| `middleware.ts` `updateSession()` | 管理側ルートの保護・セッション更新 |
 | `database.types.ts` | MCP `generate_typescript_types` 出力。全クライアントに `<Database>` 適用。**スキーマ変更後は必ず再生成** |
+
+### 生徒向け `/kiroku` の合言葉ゲート（フェーズ2・チケット19）
+
+生徒さんには Supabase アカウントを配らず、教室で口頭共有する合言葉で仕切る（REQUIREMENTS_phase2 §4）。
+
+- **判定は middleware**（`src/middleware.ts` の `kirokuGate`）。`/kiroku` 自身は Cookie なしで通し、それ以外の `/kiroku/*` は Cookie 不一致なら `/kiroku` へ 307（`?next=` は持たせない）。Server Action の POST もページ URL 宛なのでここを通る。
+- **Cookie は2本**（属性は `src/lib/kiroku/gate.ts` の `kirokuCookieOptions` に集約）:
+
+| 名前 | 中身 | 属性 |
+|---|---|---|
+| `kiroku_gate` | `KIROKU_PASSWORD` から導出した SHA-256 hex | httpOnly / `path=/kiroku` / `sameSite=lax` / `secure` は本番のみ / `maxAge` 1年 |
+| `kiroku_class` | 記憶しているクラスの uuid | 同上 |
+
+- トークンは `sha256("labocore:kiroku:v1:" + 合言葉)`。**秘密ではない**（合言葉を知っていれば誰でも計算できる）。狙いは合言葉を変えたときに配布済み Cookie が自動失効すること。
+- `KIROKU_PASSWORD` 未設定時は **fail-closed**（トークン null＝常に不一致）。合言葉画面自体は開くのでリダイレクトループにはならず、送信時に設定エラー用の別文言を返す。
+- `src/lib/kiroku/gate.ts` は **Edge の middleware と Node の Server Action の両方から import される純粋モジュール**。`next/headers` も Supabase も持ち込まない。ハッシュは Web Crypto（`require("crypto")` は Edge ビルドを壊す）。
+- **`cookies().delete(name)` は `path=/` で消しにいくため `path=/kiroku` の Cookie には効かない。** 消すときは `set(name, "", { ...kirokuCookieOptions, maxAge: 0 })`。
+- ルーティング: `/kiroku`（合言葉・通過済みなら振り分け）→ `/kiroku/select`（クラスえらび）→ `/kiroku/[classId]`（クラスページ）。振り分けの判断は `/kiroku/page.tsx` だけが持つ。
+- **`export const dynamic = "force-dynamic"` は `(kiroku)/layout.tsx` に1か所**。配下の page には継承されるが **route handler には継承されない**。anon で読むためルートキャッシュが効いてしまい、日付をまたいでもミューテーションが起きないので期限切れのお知らせが残り続けるのを防ぐ目的。
+- **セキュリティの位置づけ（正直な注記）**: 合言葉はアプリ層のゲートで、授業記録系テーブルは anon に読み取りを許可しているため、API を直接叩けば合言葉なしでも読める。掲載内容を「顔なし・個人情報なしの授業記録」に限る運用でカバーする（生徒台帳・出欠・支払いは anon 完全遮断のまま）。
 
 ---
 
@@ -364,14 +387,23 @@ src/
         classes/           … page / new / [id]/edit / class-form / actions
         students/          … page / new / [id]/edit / [id](詳細) / student-form / student-search-list / no-classes-notice / actions
         closed-days/       … page / closed-day-form / actions
+      records/             … 授業記録の管理（フェーズ2・16〜18）
+        page.tsx / record-list / record-form / photo-picker / actions / new / [id]/edit
+        next-lessons/      … 次回のじゅぎょう（page / list / card / actions）
+        announcements/     … お知らせ（page / new / [id]/edit / form / actions）
+    (kiroku)/              … 生徒向け（フェーズ2・19〜）。合言葉 Cookie で保護・noindex
+      layout.tsx           … metadata + force-dynamic のみ（面は各ページが敷く）
+      kiroku/              … page(K1) / gate-form(client) / actions / select(K2) / [classId](K3)
     api/keepalive/route.ts … Vercel Cron
     layout.tsx / globals.css
-  components/              … confirm-dialog / toast / yen / ui/form / nav/*
+  components/              … confirm-dialog / toast / yen / ui/form / nav/* / v2/*
   lib/
     attendance.ts          … getDayAttendance + 出欠型
     format.ts              … 日付・金額フォーマッタ
+    accent.ts / form.ts / revalidate.ts / records.ts / image*.ts / r2.ts
     auth/actions.ts        … signOut
-    supabase/              … server / client / middleware / database.types
+    kiroku/                … gate（合言葉・純粋モジュール）/ classes（anon のクラス一覧）
+    supabase/              … server / client / anon / middleware / database.types
   middleware.ts
 vercel.json                … cron 設定
 tailwind.config.ts         … デザイントークン

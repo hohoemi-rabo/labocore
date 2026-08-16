@@ -53,10 +53,13 @@ NEXT_PUBLIC_SUPABASE_ANON_KEY=<anon (publishable) key>
 | `R2_SECRET_ACCESS_KEY` | R2 API トークンのシークレット | 写真機能に必須 |
 | `R2_BUCKET` | バケット名（例 `labocore-kiroku`） | 写真機能に必須 |
 | `R2_PUBLIC_BASE_URL` | r2.dev の公開 URL（例 `https://pub-xxxx.r2.dev`） | 写真機能に必須 |
-| `KIROKU_PASSWORD` | 生徒向けページの合言葉（「ほほえみ」）。**チケット19 で使用** | 生徒向けページに必須 |
+| `KIROKU_PASSWORD` | 生徒向けページ `/kiroku` の合言葉（「ほほえみ」）。[後述](#生徒向けページkiroku) | ✅（ローカル/本番とも） |
 
 > R2 の5変数が未設定でもアプリは起動し、写真を扱わない画面は通常どおり動く。
 > 写真のアップロード時にだけ「R2 の環境変数が未設定です」というエラーになる。
+>
+> `KIROKU_PASSWORD` が未設定でも管理画面は通常どおり動くが、生徒向けページは
+> 合言葉画面から先へ進めなくなる（fail-closed）。
 
 ### 3. 開発サーバー
 
@@ -86,6 +89,7 @@ npm run dev
    - `NEXT_PUBLIC_SUPABASE_ANON_KEY`
    - `CRON_SECRET` — keepalive cron の認証用（[後述](#supabase-スリープ防止keepalive-cron)）
    - `R2_*` の5変数 — 授業記録の写真用（[後述](#写真の保存先cloudflare-r2)）
+   - `KIROKU_PASSWORD` — 生徒向けページの合言葉（[後述](#生徒向けページkiroku)）。**未設定のままだと生徒向けページが開けない**
    - ※ Supabase の2つはローカルの `.env.local` と同じ値。anon（publishable）キーはクライアントに露出する前提のキーで、データ保護は Supabase 側の RLS が担う
 3. デプロイ後、本番 URL の `/login` から管理者ユーザーでログインできることを確認する
 4. 以降は `main` への push で自動デプロイされる
@@ -181,6 +185,21 @@ npm run verify:r2
   WAF・キャッシュルール・Access も `r2.dev` では使えない（独自ドメインのみ）
 - アップロードは Server Action 経由で、**Vercel のリクエストボディ上限 4.5MB** に収める必要がある。
   そのため送信前にブラウザ側でも縮小している（`src/lib/image-client.ts`）
+
+## 生徒向けページ（`/kiroku`）
+
+生徒さんが授業の記録を見るページ。管理画面とは認証が別で、Supabase のアカウントは配らない。
+
+- URL: https://labocore.vercel.app/kiroku （LINE グループで案内する）
+- 入り口は**教室で口頭共有する合言葉**ひとつだけ。`KIROKU_PASSWORD`（= 「ほほえみ」）と照合する
+- 一度入れると httpOnly Cookie に記憶され、**約1年は聞かれない**。クラスも記憶するので、次回からは自分のクラスのページが直接開く
+- 全ページ `noindex`（検索結果に出ない）
+
+**運用メモ**
+
+- `KIROKU_PASSWORD` を変えて再デプロイすると、**配布済みの Cookie は自動的に無効**になる（全員がもう一度入力する）
+- ローカルと Vercel Production の両方に設定が要る。未設定だと合言葉画面から先へ進めない（fail-closed）
+- 合言葉はアプリ層の「身内向けの目印」で、暗号的な保護ではない。授業記録・お知らせ・コマ情報は anon ロールに読み取りを許可しているため、API を直接叩けば合言葉なしでも読める。**掲載内容は顔なし・個人情報なしに限る**運用でカバーしている（生徒台帳・出欠・支払いは RLS で anon 完全遮断）
 
 ## コマンド
 

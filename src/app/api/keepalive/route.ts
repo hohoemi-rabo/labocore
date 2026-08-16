@@ -1,6 +1,5 @@
 import { NextResponse } from "next/server";
-import { createClient } from "@supabase/supabase-js";
-import type { Database } from "@/lib/supabase/database.types";
+import { createAnonClient } from "@/lib/supabase/anon";
 
 // Supabase 無料プランは一定期間 DB アクティビティがないとプロジェクトが一時停止される。
 // Vercel Cron から1日1回ここを叩き、実際に Postgres へ軽量クエリを投げてアクティビティを作る。
@@ -26,11 +25,8 @@ export async function GET(request: Request) {
 
   // セッションを持たない cron 実行なので、cookie ベースの server client ではなく
   // 素の anon クライアントを使う（@/lib/supabase/server.ts は cookie 前提のため不適）。
-  const supabase = createClient<Database>(
-    process.env.NEXT_PUBLIC_SUPABASE_URL!,
-    process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,
-    { auth: { persistSession: false } },
-  );
+  // 実体は生徒向けページ（/kiroku）と共用の createAnonClient()。
+  const supabase = createAnonClient();
 
   // head:true + count:'exact' は行本体を転送しない最小のクエリ。
   // 件数が何件になるかは目的ではなく、クエリが Postgres に到達することが目的。

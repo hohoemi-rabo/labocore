@@ -17,6 +17,10 @@ export const v2CanvasClass =
 export const entryCanvasClass =
   "v2-canvas flex min-h-screen items-center justify-center bg-ground bg-ambient-strong px-6 py-10 font-jp text-[17px] leading-jp text-fg";
 
+// 生徒向け本体ページ（クラスページ）の全面キャンバス。入口と違い上詰め・アンビエントは通常。
+export const kirokuCanvasClass =
+  "v2-canvas min-h-screen bg-ground bg-ambient font-jp text-[17px] leading-jp text-fg";
+
 // ── カード ─────────────────────────────────────────────────
 /** 入口ボックス（合言葉・クラスえらび）。中央 460px・ガラス面 + blur + 大影 */
 export const entryBoxClass =
@@ -51,14 +55,20 @@ export const tricolorClass = "h-1 w-[76px] rounded-pill bg-tricolor";
 export const tricolorSmClass = "h-1 w-14 rounded-pill bg-tricolor";
 
 // ── ボタン ─────────────────────────────────────────────────
+// ⚠️ base に文字サイズを含めない（理由は v2/form.ts の fieldBase のコメントと同じ）。
 const buttonBase =
   "flex min-h-[44px] items-center justify-center rounded-16 px-6 font-bold text-white transition active:translate-y-0 active:scale-95";
+const skyFill =
+  "bg-sky-fill shadow-glow-sky hover:-translate-y-0.5 hover:shadow-glow-sky-hover";
 
 /** 主要ボタン（生徒向け・クラス色で塗る） */
-export const accentButtonClass = `${buttonBase} bg-accent-fill text-[20px] shadow-glow-btn hover:-translate-y-0.5 hover:shadow-glow-btn-hover`;
+export const accentButtonClass = `${buttonBase} bg-accent-fill shadow-glow-btn hover:-translate-y-0.5 hover:shadow-glow-btn-hover text-[20px]`;
 
 /** 主要ボタン（管理画面・スカイ固定。DESIGN_v2 §8） */
-export const skyButtonClass = `${buttonBase} bg-sky-fill text-[17px] shadow-glow-sky hover:-translate-y-0.5 hover:shadow-glow-sky-hover`;
+export const skyButtonClass = `${buttonBase} ${skyFill} text-[17px]`;
+
+/** 入口画面の主要ボタン（「開く」）。ボックス幅いっぱい・DESIGN_v2 §5 で 1.15rem = 20px */
+export const entryButtonClass = `${buttonBase} ${skyFill} w-full text-[20px]`;
 
 /** 日付ピル（記録カードの日付など。アクセント塗り + 色グロー） */
 export const datePillClass =
