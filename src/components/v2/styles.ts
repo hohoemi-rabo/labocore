@@ -55,20 +55,31 @@ export const tricolorClass = "h-1 w-[76px] rounded-pill bg-tricolor";
 export const tricolorSmClass = "h-1 w-14 rounded-pill bg-tricolor";
 
 // ── ボタン ─────────────────────────────────────────────────
-// ⚠️ base に文字サイズを含めない（理由は v2/form.ts の fieldBase のコメントと同じ）。
+// ⚠️ base に「文字サイズ」と「角丸」を含めない（理由は v2/form.ts の fieldBase のコメントと同じ）。
+// 同じプロパティのユーティリティを2つ並べると、どちらが勝つかは class 属性の順序ではなく
+// Tailwind が出力する CSS の順序で決まる。コピーボタンだけ rounded-pill が要るので、
+// 角丸も各 export が自分で持つ形にしてある。
 const buttonBase =
-  "flex min-h-[44px] items-center justify-center rounded-16 px-6 font-bold text-white transition active:translate-y-0 active:scale-95";
+  "flex min-h-[44px] items-center justify-center px-6 font-bold text-white transition active:translate-y-0 active:scale-95";
 const skyFill =
   "bg-sky-fill shadow-glow-sky hover:-translate-y-0.5 hover:shadow-glow-sky-hover";
 
 /** 主要ボタン（生徒向け・クラス色で塗る） */
-export const accentButtonClass = `${buttonBase} bg-accent-fill shadow-glow-btn hover:-translate-y-0.5 hover:shadow-glow-btn-hover text-[20px]`;
+export const accentButtonClass = `${buttonBase} rounded-16 bg-accent-fill shadow-glow-btn hover:-translate-y-0.5 hover:shadow-glow-btn-hover text-[20px]`;
 
 /** 主要ボタン（管理画面・スカイ固定。DESIGN_v2 §8） */
-export const skyButtonClass = `${buttonBase} ${skyFill} text-[17px]`;
+export const skyButtonClass = `${buttonBase} ${skyFill} rounded-16 text-[17px]`;
 
 /** 入口画面の主要ボタン（「開く」）。ボックス幅いっぱい・DESIGN_v2 §5 で 1.15rem = 20px */
-export const entryButtonClass = `${buttonBase} ${skyFill} w-full text-[20px]`;
+export const entryButtonClass = `${buttonBase} ${skyFill} w-full rounded-16 text-[20px]`;
+
+// プロンプトのコピーボタン（DESIGN_v2 §7）。押すと2.5秒だけ完了状態に変わる。
+// クラスは連結せず**文字列ごと差し替える**こと（bg-copy-fill と bg-done-fill を
+// 同時に当てると、どちらが勝つかが出力順まかせになる）。
+// 文言が長く 375px では2行になるため、モバイルは全幅 + 上下パディングで高さを稼ぐ。
+const copyBase = `${buttonBase} w-full rounded-pill py-2 text-center text-[17px] sm:w-auto`;
+export const copyButtonClass = `${copyBase} bg-copy-fill shadow-glow-copy`;
+export const copyDoneButtonClass = `${copyBase} bg-done-fill shadow-glow-done`;
 
 /** 日付ピル（記録カードの日付など。アクセント塗り + 色グロー） */
 export const datePillClass =

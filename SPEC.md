@@ -246,6 +246,27 @@
 - ルーティング: `/kiroku`（合言葉・通過済みなら振り分け）→ `/kiroku/select`（クラスえらび）→ `/kiroku/[classId]`（クラスページ）。振り分けの判断は `/kiroku/page.tsx` だけが持つ。
 - **`export const dynamic = "force-dynamic"` は `(kiroku)/layout.tsx` に1か所**。配下の page には継承されるが **route handler には継承されない**。anon で読むためルートキャッシュが効いてしまい、日付をまたいでもミューテーションが起きないので期限切れのお知らせが残り続けるのを防ぐ目的。
 - **セキュリティの位置づけ（正直な注記）**: 合言葉はアプリ層のゲートで、授業記録系テーブルは anon に読み取りを許可しているため、API を直接叩けば合言葉なしでも読める。掲載内容を「顔なし・個人情報なしの授業記録」に限る運用でカバーする（生徒台帳・出欠・支払いは anon 完全遮断のまま）。
+- **`kirokuCookieOptions.secure` は `NODE_ENV === "production"`。** そのため本番ビルドを平文 http（LAN の IP 等）で開くと Cookie が保存されず合言葉画面から進めない。実機確認は `npm run dev` で行う（本番は常に https なので影響なし）。
+
+### クラスページ `/kiroku/[classId]`（チケット20）
+
+セクション順（サンプル画面3準拠）: ページ見出し → お知らせ ×N → 次回のじゅぎょう → 今月のよてい → 「これまでのじゅぎょう」見出し → 記録カード ×N（0件なら破線の空状態）。`header` / `main` / `footer` は兄弟で、ヘッダーだけ sticky + `backdrop-blur`。
+
+- **取得は `Promise.all` で4本**（すべて `createAnonClient()`）:
+
+| 取得 | 並び順・要点 |
+|---|---|
+| `listActiveClasses()` | タブ・classId 検証・次回のじゅぎょうを兼ねる（`cache()` 済み） |
+| `lesson_records` | `lesson_date` 降順。`class_id` と `status='published'` で絞る（published は RLS でも保証） |
+| `announcements` | `starts_on` 降順 → `created_at` 降順（同日タイの並びを固定するため） |
+| `closed_days` | 当月レンジ（`shiftMonth` で翌月初を上限にし月末日数を計算しない）・昇順 |
+
+- **絞り込みの分担**: 掲載期間は **RLS**、「全体向け or このクラス向け」は**アプリ側の JS**。`.or()` は生の PostgREST フィルタ文字列を取るためルートパラメータを埋めない。
+- **出し分け**: お知らせ=0件なら丸ごと非表示 / 次回=日付 null・過去日・テーマ空のいずれかで非表示 / 今月のよてい=常時 / これまでのじゅぎょう=見出し常時＋空状態。
+- **今月のよていの算出**（`src/lib/kiroku/schedule.ts` の `buildMonthlySchedule`）: 月初から目的の曜日までオフセットして7日ずつ進める純関数。`weekdayOf` / `addDays` は UTC 基準なので tz 非依存。`closed_days` は教室全体だがクラスの曜日で絞る時点で無関係な日は落ちる。`reason` は生徒にそのまま出る（null なら「〜のため」ごと省く）。
+- アクセントの注入は**ルート1か所**（`accentStyle(cls.themeColor)`）。タブ・日付ピル・次回カードのグローがすべて `var(--accent)` を参照する。
+- クラスタブは `<Link prefetch={false}>`。記憶クラス Cookie は**変更しない**（変えるのはフッターの「クラスをえらびなおす」だけ）。
+- **キャッシュの確認は本番ビルドでのみ有効。** `npm run dev` はルートキャッシュを適用しないため、`force-dynamic` が無くても「期限切れのお知らせが出ない」が通ってしまう。`npm run build && npm start` で確認する。
 
 ---
 
@@ -393,7 +414,8 @@ src/
         announcements/     … お知らせ（page / new / [id]/edit / form / actions）
     (kiroku)/              … 生徒向け（フェーズ2・19〜）。合言葉 Cookie で保護・noindex
       layout.tsx           … metadata + force-dynamic のみ（面は各ページが敷く）
-      kiroku/              … page(K1) / gate-form(client) / actions / select(K2) / [classId](K3)
+      kiroku/              … page(K1) / gate-form(client) / actions / select(K2)
+        [classId]/         … page(K3) / kiroku-header / record-card / copy-prompt-button(client)
     api/keepalive/route.ts … Vercel Cron
     layout.tsx / globals.css
   components/              … confirm-dialog / toast / yen / ui/form / nav/* / v2/*
@@ -402,7 +424,7 @@ src/
     format.ts              … 日付・金額フォーマッタ
     accent.ts / form.ts / revalidate.ts / records.ts / image*.ts / r2.ts
     auth/actions.ts        … signOut
-    kiroku/                … gate（合言葉・純粋モジュール）/ classes（anon のクラス一覧）
+    kiroku/                … gate（合言葉・純粋モジュール）/ classes（anon のクラス一覧 + periodLabels）/ schedule（今月のよてい）
     supabase/              … server / client / anon / middleware / database.types
   middleware.ts
 vercel.json                … cron 設定

@@ -1,6 +1,6 @@
 import { accentStyle } from "@/lib/accent";
 import { WEEKDAY_LABELS, formatTimeRange } from "@/lib/format";
-import { listActiveClasses, type KirokuClass } from "@/lib/kiroku/classes";
+import { listActiveClasses, periodLabels } from "@/lib/kiroku/classes";
 import {
   entryBoxClass,
   entryCanvasClass,
@@ -23,13 +23,9 @@ const classButtonClass =
 
 export default async function KirokuSelectPage() {
   const classes = await listActiveClasses();
-
-  // 同じ曜日にコマが2つ以上あるときだけ「午前/午後」を併記する
-  // （水曜午後クラスが増えたときに自動で出る。1つしかない曜日では冗長なので出さない）。
-  const perWeekday = new Map<number, number>();
-  for (const c of classes) {
-    perWeekday.set(c.weekday, (perWeekday.get(c.weekday) ?? 0) + 1);
-  }
+  // 「午前/午後」を出すかの判定はクラスタブ（K3）と共通。
+  // ここで別実装にすると、同じクラスが画面ごとに違う名前で出てしまう。
+  const periods = periodLabels(classes);
 
   return (
     <main className={entryCanvasClass}>
@@ -69,9 +65,9 @@ export default async function KirokuSelectPage() {
                 />
                 <span className="block text-[22px] font-black leading-tight tracking-[.03em] text-fg">
                   {WEEKDAY_LABELS[c.weekday]}曜日
-                  {(perWeekday.get(c.weekday) ?? 0) >= 2 && (
+                  {periods.get(c.id) && (
                     <span className="ml-1 text-[14px] font-bold text-accent">
-                      {periodLabel(c)}
+                      {periods.get(c.id)}
                     </span>
                   )}
                 </span>
@@ -87,10 +83,4 @@ export default async function KirokuSelectPage() {
       </div>
     </main>
   );
-}
-
-/** 開始時刻から午前/午後を判定する。start_time が無いコマでは何も出さない。 */
-function periodLabel(cls: KirokuClass) {
-  if (!cls.startTime) return null;
-  return Number(cls.startTime.slice(0, 2)) < 12 ? "午前" : "午後";
 }

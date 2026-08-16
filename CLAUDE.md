@@ -14,7 +14,7 @@ LaboCore（ラボコア）— シニア向けパソコン・スマホ教室「�
 
 **フェーズ1（チケット 01〜12）は実装完了し、本番運用中**。URL は https://labocore.vercel.app（Vercel・GitHub 連携で `main` push により自動デプロイ）。8画面（今日の出欠 / カレンダー / 月次集計 / 生徒・コマ・休講日管理 / 生徒詳細 / ログイン）が稼働し、Supabase スリープ防止の keepalive cron も稼働中（下記）。
 
-**フェーズ2「授業記録」はチケット 13〜28 に分割済み。13〜19 が実装完了し、次は 20 から着手する。** 現状の詳細は下記「フェーズ2の現状」、横断的な確定事項は「フェーズ2の実装方針」を参照。
+**フェーズ2「授業記録」はチケット 13〜28 に分割済み。13〜20 が実装完了し、次は 21 から着手する。** 現状の詳細は下記「フェーズ2の現状」、横断的な確定事項は「フェーズ2の実装方針」を参照。
 
 **運用者タスクの状況**: R2 のバケット・トークン・env（ローカル + Vercel Production）は設定済み。残るのは (a) Supabase Dashboard での漏洩パスワード保護の有効化（フェーズ1からの積み残し・急ぎでない）、(b) **`KIROKU_PASSWORD`（合言葉「ほほえみ」）を Vercel Production に登録する**（ローカルの `.env.local` は設定済み。**未登録のまま本番デプロイすると生徒向けページが fail-closed で開けない**）。
 
@@ -109,7 +109,7 @@ LaboCore（ラボコア）— シニア向けパソコン・スマホ教室「�
 - `src/app/(app)/attendance-board.tsx`（`useOptimistic`+`useTransition`+`useToast` の中心）/ `attendance-toggle.tsx`（出席｜欠席の2セグメント pill）/ `add-student.tsx`（別日来訪の追加）。`doneLabel`/`addLabel` で文言を差し替えて再利用する。
 - `src/app/(app)/summary/` — 月次集計。`setPayment` も同じ「redirect せず `{ error? }`・楽観的更新」パターン（`payments` を `onConflict: "student_id,target_month"` で upsert）。集計は `attendance_records` を月範囲取得し **JS 集約**（`unit_price_at_time` を合計＝スナップショット）。
 
-## フェーズ2の現状（13〜18 実装済み・19 から着手）
+## フェーズ2の現状（13〜20 実装済み・21 から着手）
 
 ### 追加済みの DB（14）
 
@@ -119,14 +119,15 @@ LaboCore（ラボコア）— シニア向けパソコン・スマホ教室「�
 - anon SELECT ポリシー: `classes`(is_active) / `closed_days`(全行) / `lesson_records`(published) / `announcements`(JST で掲載期間内)。**students・attendance_records・payments には付けない**
 - **⚠️ 新テーブルを足すときは `create table` と `enable row level security` を同一マイグレーションに入れる**。`public` の DEFAULT PRIVILEGES が anon に全権限を自動付与するため、分けるとその間だけ読み書き自由になる（SPEC.md §4.8）
 
-### 追加済みのライブラリ（13・15・16・17・19）
+### 追加済みのライブラリ（13・15・16・17・19・20）
 
 | ファイル | 中身 |
 |---|---|
 | `src/lib/accent.ts` | `accentStyle(color)`（`--accent` を style 属性で注入）/ `CLASS_THEME_COLORS`（6色）/ `DEFAULT_ACCENT` |
 | `src/lib/supabase/anon.ts` | `createAnonClient()`（cookie を持たない文脈用・keepalive と `/kiroku` が共用） |
 | `src/lib/kiroku/gate.ts` | Cookie 名/属性 `kirokuCookieOptions` / `kirokuToken` / `isKirokuUnlocked` / `matchesKirokuPassword`。**純粋モジュール（Edge から import される）** |
-| `src/lib/kiroku/classes.ts` | `listActiveClasses()` / `findActiveClass()`（anon 経由・20 のクラスタブでも使う） |
+| `src/lib/kiroku/classes.ts` | `listActiveClasses()`（`cache()` 済み・`next_lesson_*` 込み）/ `findActiveClass()` / `periodLabels()`（午前・午後を出すかの判定。K2 と K3 で共通） |
+| `src/lib/kiroku/schedule.ts` | `buildMonthlySchedule()`（今月のよてい・純関数） |
 | `src/lib/form.ts` | `toFieldErrors` / `nullIfEmpty` |
 | `src/lib/revalidate.ts` | `revalidateRecords()` / `revalidateClasses()`（どちらも `"layout"` 指定） |
 | `src/lib/records.ts` | `MAX_PHOTOS`（サーバー・クライアント共用の定数置き場） |
@@ -134,13 +135,13 @@ LaboCore（ラボコア）— シニア向けパソコン・スマホ教室「�
 | `src/lib/image-client.ts` | `shrinkImageInBrowser`（ブラウザ側の事前縮小） |
 | `src/lib/r2.ts` | `uploadImage` / `deleteImage` / `copyImage`（server-only） |
 | `src/lib/format.ts` | 既存に加え `addDays` を追加 |
-| `src/components/v2/styles.ts` | `v2CanvasClass` / `entryCanvasClass` / `kirokuCanvasClass` / `entryBoxClass` / `glassCardClass` / `cardClass` / `accentCardClass` / `eyebrowClass`(+News/Prompt) / `sectionTitleClass` / `tricolorClass`(+Sm) / `accentButtonClass` / `skyButtonClass` / `entryButtonClass` / `datePillClass` |
+| `src/components/v2/styles.ts` | `v2CanvasClass` / `entryCanvasClass` / `kirokuCanvasClass` / `entryBoxClass` / `glassCardClass` / `cardClass` / `accentCardClass` / `eyebrowClass`(+News/Prompt) / `sectionTitleClass` / `tricolorClass`(+Sm) / `accentButtonClass` / `skyButtonClass` / `entryButtonClass` / `copyButtonClass`(+Done) / `datePillClass` |
 | `src/components/v2/form.ts` | `labelClass` / `inputClass` / `selectClass` / `textareaClass` / `entryInputClass` / `errorClass` / `errorBandClass` |
 | `src/components/v2/confirm-dialog.tsx`・`toast.tsx` | v2 版（v1 版はダーク面で読めない。**v2 画面では必ず v2 版を import する**） |
 
 `scripts/verify-r2.mts`（`npm run verify:r2`）は R2 の疎通確認ツール（常設）。
 
-### 追加済みの画面（16〜19・すべて v2 デザイン）
+### 追加済みの画面（16〜20・すべて v2 デザイン）
 
 管理側（16〜18）:
 
@@ -155,18 +156,21 @@ LaboCore（ラボコア）— シニア向けパソコン・スマホ教室「�
 
 - `/kiroku` — K1 合言葉。通過済みなら記憶クラス or クラスえらびへ振り分ける（判断はここだけが持つ）
 - `/kiroku/select` — K2 クラスえらび。**クライアント JS ゼロ**（素の `<form action>` + `<button name="class_id">`）
-- `/kiroku/[classId]` — K3。**19 では仮ページ。20 で本文だけ差し替える**（classId 検証・アクセント注入・「クラスをえらびなおす」フッターはそのまま使える）
+- `/kiroku/[classId]` — K3 クラスページ（20）。sticky ヘッダー + クラスタブ + お知らせ + 次回のじゅぎょう + 今月のよてい + 記録カード。`copy-prompt-button.tsx` が生徒向け唯一のクライアント部品
 - `(kiroku)/layout.tsx` — `metadata`（`robots: noindex` / `title.template`）と `dynamic = "force-dynamic"` だけの pass-through。**面は各ページが `entryCanvasClass` / `kirokuCanvasClass` で敷く**
 
-### 20〜21（生徒向け `/kiroku` の続き）で必ず踏まえること
+### 21（PWA・先行お披露目）で必ず踏まえること
 
-19 で済んだこと: anon クライアントの共通化 / middleware の合言葉分岐 / `(kiroku)` layout と `force-dynamic`。
+19〜20 で済んだこと: anon クライアントの共通化 / middleware の合言葉分岐 / `(kiroku)` layout と `force-dynamic` / クラスページ本体。
 
 - **`force-dynamic` は `(kiroku)/layout.tsx` の1か所で配下の page に効く**（18 からの申し送り。生徒向けは anon で読むため**ルートキャッシュが効いてしまい**、日付をまたいでも何のミューテーションも起きないので期限切れのお知らせが出続ける）。**⚠️ route handler には継承されない** — 21 で manifest を `route.ts` / `manifest.ts` で出すなら個別に指定する
 - **⚠️ middleware の matcher は `.webmanifest` / `.json` を除外していない。** `/manifest.webmanifest` を素直に置くと未ログインの生徒が `/login` へ飛ばされインストールできない（21 の Todo に記載済み）
-- 次回カードは `next_lesson_date >= todayJst()` のときだけ出す（データは消さない仕様）
-- お知らせは「全体向け（`class_id IS NULL`）+ そのクラス向け」。**掲載期間の絞り込みは RLS がやるのでアプリ側では不要**
-- クラス色の**重複は許容される仕様**。色だけに頼らず見分けられるようにする。**クラスえらび（19）は「曜日＋（同曜日に2コマ以上あるときだけ午前/午後）＋時間帯」で、クラス名は出さない**（REQUIREMENTS_phase2 §7 K2 の「クラス名を併記」を上書きする決定。19 のチケットに理由あり）。20 のクラスタブも同じ表記に揃える
+- **⚠️ キャッシュの確認は本番ビルドでしかできない。** `npm run dev` はルートキャッシュを適用しないので、`force-dynamic` が無くても「期限切れのお知らせが出ない」が通ってしまう。`rm -rf .next && npm run build && npm start` で確認する
+- **⚠️ LAN の IP（`http://192.168.x.x:3000`）で実機確認するときは `npm run dev` を使う。** 本番ビルドだと合言葉 Cookie が `Secure` 付きになり、平文 http では保存されず合言葉画面から進めない（`secure: NODE_ENV === "production"`）。あわせて `navigator.clipboard` も非 secure context では undefined になる（20 でフォールバック実装済み・実機での動作確認は 21 の Todo）
+- **⚠️ 開発環境（WSL）に絵文字フォントが無い。** 📢 📅 📋 😊 は豆腐で表示されるので、絵文字の見た目はヘッドレスでは確認できない。実機で見る
+- **クラスタブは水曜午後クラスを足すと6個になり横スクロールする。** クライアント JS を持たないので自動スクロールはしない（375px でアクティブタブに手が届くかを 21 で確認）
+- 「午前/午後」を出すかの判定は `src/lib/kiroku/classes.ts` の `periodLabels()` が単一の情報源。クラスえらび（K2）とクラスタブ（K3）で共用しているので、片方だけ書き換えない
+- クラス色の**重複は許容される仕様**。色だけに頼らず見分けられるようにする。**クラスえらびは「曜日＋（同曜日に2コマ以上あるときだけ午前/午後）＋時間帯」で、クラス名は出さない**（REQUIREMENTS_phase2 §7 K2 の「クラス名を併記」を上書きする決定。19 のチケットに理由あり）
 
 ## フェーズ2の実装方針（チケット 13〜28 分割時に確定済み）
 
@@ -241,7 +245,9 @@ LaboCore（ラボコア）— シニア向けパソコン・スマホ教室「�
 - フォントは Noto Sans JP（**可変フォント**で読み込み済み）。管理画面の基本アクセントはスカイ `#38bdf8` 固定・生徒向けは選択中クラスの色
 - **トークン名は DESIGN_v2 §2 の対応表を見る**（仕様書の名前と Tailwind のキー名が一部異なる）。主なもの: 面 `bg-ground` / `bg-surface` / `bg-surface-2` / `bg-sunken`、文字 `text-fg` / `text-fg-body` / `text-sub`、枠 `border-line`、アクセント `accent` / `accent-soft` / `accent-deep` / `accent-line`、役割色は**色名ではなく役割名** `news` / `prompt` / `off` / `done`、影 `shadow-elev-1〜3` / `shadow-well` / `shadow-glow*`、塗り `bg-accent-fill` / `bg-sky-fill` / `bg-card` / `bg-glass` / `bg-tricolor`
 - **`accent` 系トークンに opacity modifier（`bg-accent-soft/50`）を使わない。** Tailwind が `color-mix()` をパースできず、**CSS が1行も出力されずに黙って消える**。透明度は `color-mix` の % 側で表現する
-- **同じプロパティのユーティリティを2つ並べない（19 で判明）。** `${inputClass} text-[23px]` のように後ろへ足しても勝つとは限らない（class 属性の並び順は無関係で、Tailwind が出力する CSS の順序で決まる）。`src/components/v2/{styles,form}.ts` の private な base（`fieldBase` / `buttonBase`）は**文字サイズを持たない**設計にしてあるので、別サイズが要る画面はそこから新しい定数を派生させる（`entryInputClass` / `entryButtonClass` が前例）
+- **同じプロパティのユーティリティを2つ並べない（19 で判明・20 で角丸にも拡大）。** `${inputClass} text-[23px]` のように後ろへ足しても勝つとは限らない（class 属性の並び順は無関係で、Tailwind が出力する CSS の順序で決まる）。`src/components/v2/{styles,form}.ts` の private な base（`fieldBase` / `buttonBase`）は**文字サイズも角丸も持たない**設計にしてあるので、別サイズ・別角丸が要る画面はそこから新しい定数を派生させる（`entryInputClass` / `entryButtonClass` / `copyButtonClass` が前例）
+- **`<pre>` には `font-jp` を明示する（20 で判明）。** Tailwind の preflight が `code, kbd, samp, pre` に `fontFamily.mono` を当てるため、指定しないと日本語が等幅フォールバックで崩れる。あわせて `whitespace-pre-wrap break-words`（375px で長い URL が溢れない）
+- **hover の動きは押せる要素だけに付ける（20 で判明）。** Tailwind 3.4 は `hoverOnlyWhenSupported` が既定オフ（v4 で既定になった）なので、`hover:-translate-y-*` はタップでも発火して貼り付く。カードなど押せない要素に付けない（DESIGN_v2 §6）
 
 ### v1（DESIGN.md — 未刷新画面の保守のみ）
 
