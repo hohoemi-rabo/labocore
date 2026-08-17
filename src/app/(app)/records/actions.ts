@@ -1,6 +1,7 @@
 "use server";
 
 import { z } from "zod";
+import { after } from "next/server";
 import { redirect } from "next/navigation";
 import { createClient } from "@/lib/supabase/server";
 import { toFieldErrors, nullIfEmpty } from "@/lib/form";
@@ -199,8 +200,9 @@ export async function updateRecord(
   }
 
   // 更新が確定してから、外された写真の実体を消す（先に消すと失敗時に取り返せない）。
+  // ベストエフォートの後片付けなので after() に逃し、redirect が R2 の往復を待たないようにする。
   const removed = current.image_urls.filter((url) => !kept.includes(url));
-  await deleteUnreferenced(removed, id);
+  after(() => deleteUnreferenced(supabase, removed, id));
 
   revalidateRecords();
   redirect("/records");
@@ -226,7 +228,8 @@ export async function deleteRecord(formData: FormData) {
     return;
   }
 
-  if (target) await deleteUnreferenced(target.image_urls, id);
+  // ベストエフォートの後片付けなので after() に逃す（updateRecord と同じ）。
+  if (target) after(() => deleteUnreferenced(supabase, target.image_urls, id));
 
   revalidateRecords();
   redirect("/records");
@@ -445,11 +448,17 @@ async function fetchImage(url: string): Promise<Buffer | null> {
  * R2 の画像を削除する。ただし**他の記録カードが同じ URL を参照していれば残す**。
  * copyImage はオブジェクトごと複製するので通常は共有されないが、念のための保険
  * （チケット23 以前に作られた行が URL を共有している可能性がある）。
+ *
+ * after() の中（=レスポンス送信後）から呼ばれるため、supabase クライアントは
+ * アクション本体で作ったものを引数で受ける（ここで cookies() に触れない）。
  */
-async function deleteUnreferenced(urls: string[], excludeRecordId: string) {
+async function deleteUnreferenced(
+  supabase: Awaited<ReturnType<typeof createClient>>,
+  urls: string[],
+  excludeRecordId: string,
+) {
   if (urls.length === 0) return;
 
-  const supabase = await createClient();
   const { data: others } = await supabase
     .from("lesson_records")
     .select("image_urls")
