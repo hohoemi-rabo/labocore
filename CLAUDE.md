@@ -15,17 +15,42 @@ LaboCore（ラボコア）— シニア向けパソコン・スマホ教室「�
 
 **生徒向け一式は本番稼働中**（合言葉 → クラスえらび → クラスページ、PWA でホーム画面追加可）。実機確認（Safari / Chrome のホーム画面追加・絵文字・プロンプトのコピー）も済んでいる。
 
-**運用者タスクの状況**: R2・`KIROKU_PASSWORD` の env（ローカル + Vercel Production）は設定済み。残っているのは:
-- (a) Supabase Dashboard での漏洩パスワード保護の有効化（フェーズ1からの積み残し・急ぎでない）
-- (b) **お披露目に必要な入力**: 水曜午後クラスの登録（#818cf8）/ 記録カード数件と「次回のじゅぎょう」の投入 / LINE 案内（文面のたたき台は `docs/21-kiroku-pwa-release.md`）/ 先行お披露目
-- (c) **Vercel Production への `GEMINI_API_KEY` の設定**（ローカルの `.env.local` は設定済み。未設定でも記録カードの作成・公開は動き、AI 下書きボタンだけが無効になる。`GEMINI_MODEL` は任意）
+## いまの状況（2026-08-17）
 
-**注意: 本番の `lesson_records` / `announcements` は現在0件。** 生徒向けページを開くと空状態になる（不具合ではない）。動作確認で記録カードが要るときは、管理画面から作るか一時データを入れて**後で必ず消す**（過去チケットではそうしている）。
+**チケット 01〜28 はすべて完了し、コードの予定作業はゼロ。ここからは「生徒さんに実際に使ってもらう」運用フェーズに入った。**
+
+- env（Supabase / `CRON_SECRET` / `KIROKU_PASSWORD` / `R2_*` / `GEMINI_API_KEY`）は**ローカル・Vercel Production とも設定済み**
+- 残っている運用者タスク:
+  - Supabase Dashboard での**漏洩パスワード保護の有効化**（フェーズ1からの積み残し・急ぎでない。セキュリティアドバイザの WARN 1件はこれ）
+  - 水曜午後クラスの登録（#818cf8）— 現在 active なのは月〜金の午前5コマ
+  - 記録カードと「次回のじゅぎょう」の投入 → LINE 案内（文面のたたき台は `docs/21-kiroku-pwa-release.md`）→ お披露目
+- パフォーマンスアドバイザの INFO 1件（`announcements.class_id` の FK 未インデックス）は**この規模では意図的に対応しない**（判断は SPEC.md §3）
+
+### ⚠️ 本番には生徒さんが見る実データが入る段階になった
+
+- **`lesson_records` / `announcements` に本物の記録が入り始める。** 以前の「本番は0件」という前提はもう成り立たない
+- **動作確認のためにデータを作ったら、必ず消してから終わる。** 消し忘れると生徒さんの画面にテスト用のカードが出る
+- **`status='published'` にした瞬間、合言葉を知っている生徒さん全員に見える。** 検証は `draft` のままで行う
+- 出欠・支払いも実データ。触ったら元に戻す（月次集計の金額に直結する）
+- 写真は「顔なし・個人情報なし」の運用を継続する（anon で読める・AI にも送られる）
+
+### 生徒さん・先生から不具合を言われたときの当たり所
+
+| 症状 | まず見るところ |
+|---|---|
+| 記録が生徒さんに見えない | カードが `draft` のままでないか（`published` にして初めて anon の RLS を通る） |
+| お知らせが出ない / 消えない | `starts_on`〜`ends_on` の掲載期間。判定は **JST**（`(now() AT TIME ZONE 'Asia/Tokyo')::date`） |
+| また合言葉を聞かれる | `KIROKU_PASSWORD` を変えると配布済み Cookie が全部無効になる。**iPhone はホーム画面から開いた初回だけ聞かれるのが正常**（Safari と Cookie の保管庫が別） |
+| 管理画面が 500 | `vercel logs`。ネイティブモジュール（sharp）絡みは `next.config.ts` の `outputFileTracingIncludes` を疑う（ローカルでは再現しない） |
+| AI 下書きが失敗する | `npm run verify:gemini`（キー・モデル・画像付き生成を一括で確認） |
+| 写真が表示されない | `npm run verify:r2`（アップロード→取得→複製→削除まで通しで確認） |
+| DB が寝ている | keepalive cron の実行履歴を Vercel Dashboard の Settings → Cron Jobs で確認 |
 
 ## チケット運用（docs/）
 
-実装タスクは `docs/` 配下の連番チケットで管理する（`01`〜`12` = フェーズ1・完了 / `13`〜`28` = フェーズ2）。
+実装タスクは `docs/` 配下の連番チケットで管理する（`01`〜`12` = フェーズ1 / `13`〜`28` = フェーズ2。**すべて完了済み**）。
 
+- **新しい作業を始めるときは `docs/29-*.md` から続きの番号でチケットを作る**（目的 / 依存 / 参照 / Todo / 完了条件の形式は既存チケットに倣う）。フェーズ3の候補は REQUIREMENTS_phase2.md §2「含まないもの」にある
 - 番号順が推奨実装順。着手前にチケット冒頭の**依存**と**参照**セクションを確認する
 - 各チケットの Todo は `- [ ]` 形式で管理する。**作業が完了した項目は、その都度 `- [x]` に書き換えること**（チケット側の更新を忘れたままコミットしない）
 - 実装中に仕様が変わった場合はチケット本文も更新し、実装とチケットの乖離を残さない
@@ -117,7 +142,7 @@ LaboCore（ラボコア）— シニア向けパソコン・スマホ教室「�
 
 - `src/lib/attendance.ts` — 型の単一定義元（`AttendanceStatus` / `AttendanceRow` / `AttendanceCandidate` / `DayAttendance`）＋ `getDayAttendance(supabase, date)`。指定日の「その日のコマ在籍生徒 ∪ 当日記録がある生徒」を組み立てて返す。ホーム（`/`・今日）とカレンダー（`/calendar`・任意日パネル）が共用。supabase client は引数で受ける isomorphic 設計（`import type` はクライアントでも消える）。
 - `src/app/(app)/actions.ts` の `recordAttendance({ studentId, lessonDate, status })` — 出欠記録のインラインアクション（**redirect せず `{ error? }` を返す**＝楽観的更新用）。`status=null` で削除、それ以外は `unit_price_at_time` に**サーバで読んだ現在単価をスナップショット**して upsert（`onConflict: "student_id,lesson_date"`）。ホーム・カレンダーで共用。
-- `src/app/(app)/attendance-board.tsx`（`useOptimistic`+`useTransition`+`useToast` の中心）/ `attendance-toggle.tsx`（出席｜欠席の2セグメント pill）/ `add-student.tsx`（別日来訪の追加）。`doneLabel`/`addLabel` で文言を差し替えて再利用する。
+- `src/app/(app)/attendance-board.tsx`（`useOptimistic`+`useTransition`+`useToast` の中心）/ `attendance-toggle.tsx`（出席／欠席の2ピル。**連結して `overflow-hidden` で囲まない**＝グローが切れる）/ `add-student.tsx`（別日来訪の追加）。`doneLabel`/`addLabel` で文言を差し替えて再利用する。
 - `src/app/(app)/summary/` — 月次集計。`setPayment` も同じ「redirect せず `{ error? }`・楽観的更新」パターン（`payments` を `onConflict: "student_id,target_month"` で upsert）。集計は `attendance_records` を月範囲取得し **JS 集約**（`unit_price_at_time` を合計＝スナップショット）。
 
 ## フェーズ2の構成（13〜28・すべて実装済み）
@@ -130,7 +155,7 @@ LaboCore（ラボコア）— シニア向けパソコン・スマホ教室「�
 - anon SELECT ポリシー: `classes`(is_active) / `closed_days`(全行) / `lesson_records`(published) / `announcements`(JST で掲載期間内)。**students・attendance_records・payments には付けない**
 - **⚠️ 新テーブルを足すときは `create table` と `enable row level security` を同一マイグレーションに入れる**。`public` の DEFAULT PRIVILEGES が anon に全権限を自動付与するため、分けるとその間だけ読み書き自由になる（SPEC.md §4.8）
 
-### 追加済みのライブラリ（13・15・16・17・19・20・22）
+### 追加済みのライブラリ（13〜27）
 
 | ファイル | 中身 |
 |---|---|
@@ -148,7 +173,7 @@ LaboCore（ラボコア）— シニア向けパソコン・スマホ教室「�
 | `src/lib/gemini.ts` | `generateRecordDraft` / `isGeminiConfigured` / `geminiModel` / `DEFAULT_GEMINI_MODEL` / `GeminiDraftError` / `SYSTEM_INSTRUCTION`（server-only・**モデル ID とプロンプトの単一の置き場**） |
 | `src/lib/format.ts` | 既存に加え `addDays`（20）/ `nextWeekdayOnOrAfter`（23・コピー先クラスの曜日に日付を合わせる）を追加 |
 | `src/components/nav/app-header.tsx` | 管理画面の共通ヘッダー（24。sidebar.tsx を置き換え） |
-| `src/components/v2/styles.ts` | `appShellClass`(24) / `v2CanvasClass` / `entryCanvasClass` / `kirokuCanvasClass` / `entryBoxClass` / `glassCardClass` / `cardClass` / `accentCardClass` / `eyebrowClass`(+News/Prompt) / `sectionTitleClass` / `tricolorClass`(+Sm) / `accentButtonClass` / `skyButtonClass` / `entryButtonClass` / `copyButtonClass`(+Done) / `datePillClass` |
+| `src/components/v2/styles.ts` | `appShellClass`(24) / `v2CanvasClass` / `entryCanvasClass` / `kirokuCanvasClass` / `entryBoxClass` / `glassCardClass` / `cardClass` / `accentCardClass` / `heroCardClass`(26) / `eyebrowClass`(+News/Prompt) / `sectionTitleClass` / `tricolorClass`(+Sm) / `accentButtonClass` / `skyButtonClass` / `entryButtonClass` / `copyButtonClass`(+Done) / `datePillClass` |
 | `src/components/v2/form.ts` | `labelClass` / `inputClass` / `selectClass` / `textareaClass` / `entryInputClass` / `errorClass` / `errorBandClass` |
 | `src/components/v2/confirm-dialog.tsx`・`toast.tsx` | 確認ダイアログ（自前の `<form>` を持つ・入れ子にしない）とトースト（`position: fixed` なので**画面に1つ**） |
 | `public/manifest.webmanifest` | 生徒向け PWA のマニフェスト（`(kiroku)/layout.tsx` の `metadata.manifest` から参照） |
@@ -156,7 +181,7 @@ LaboCore（ラボコア）— シニア向けパソコン・スマホ教室「�
 
 `scripts/verify-r2.mts`（`npm run verify:r2`）と `scripts/verify-gemini.mts`（`npm run verify:gemini`）は疎通確認ツール（常設）。どちらも `--conditions=react-server` で実行するため、**そこから import される lib は拡張子付きの相対 import で書く**（`@/` の別名は Node が引けない）。
 
-### 追加済みの画面（16〜25・すべて v2 デザイン）
+### 追加済み・刷新済みの画面（16〜28・全画面が v2 デザイン）
 
 共通シェル・ログイン（24）:
 
@@ -169,12 +194,6 @@ LaboCore（ラボコア）— シニア向けパソコン・スマホ教室「�
 - `/summary`（26）— ヒーローを `heroCardClass`（アクセントの radial グロー + 影「大」）に。`<Yen>` の「¥」は `opacity-60`
 - `/settings` 配下8ページ（27）— ハブ・コマ・生徒・生徒詳細・休講日。3つのフォームを手動 dispatch に移行
 - いずれも**データ取得・集計・楽観的更新・CRUD の作りは無変更**（見た目と送信方式だけ）
-
-仕上げ（28）:
-
-- v1 のトークン・部品（`legacy-panel` / `confirm-dialog` / `toast` / `ui/form`）・Inter フォント・v1 デザイン仕様書を**すべて撤去**。`DESIGN_v2.md` を `DESIGN.md` にリネームした
-- `body` を常時ダークにしたので `body:has(.v2-canvas)` の出し分けは廃止（`v2-canvas` クラス自体は各キャンバスに残っている）
-- 全体 grep 監査で見つけた実害を修正: 管理画面のファビコンが v1 色のまま / `records/page.tsx` の hex 直書き / 44px 未満のタップ要素（写真の×ボタン 32px・パンくずリンク・ブランドリンク）
 
 管理側（16〜18・22）:
 
@@ -192,6 +211,12 @@ LaboCore（ラボコア）— シニア向けパソコン・スマホ教室「�
 - `/kiroku/[classId]` — K3 クラスページ（20）。sticky ヘッダー + クラスタブ + お知らせ + 次回のじゅぎょう + 今月のよてい + 記録カード。`copy-prompt-button.tsx` が生徒向け唯一のクライアント部品
 - `(kiroku)/layout.tsx` — `metadata`（`robots: noindex` / `title.template` / `manifest` / `icons` / `appleWebApp`）と `viewport`（`themeColor` / `colorScheme`）と `dynamic = "force-dynamic"` だけの pass-through。**面は各ページが `entryCanvasClass` / `kirokuCanvasClass` で敷く**
 - PWA（21）— `/kiroku` をホーム画面に追加できる。マニフェストとアイコンは `public/` 配下（下記「PWA まわりの落とし穴」）
+
+仕上げ（28）:
+
+- v1 のトークン・部品（`legacy-panel` / `confirm-dialog` / `toast` / `ui/form`）・Inter フォント・v1 デザイン仕様書を**すべて撤去**。`DESIGN_v2.md` を `DESIGN.md` にリネームした
+- `body` を常時ダークにしたので `body:has(.v2-canvas)` の出し分けは廃止（`v2-canvas` クラス自体は各キャンバスに残っている）
+- 全体 grep 監査で見つけた実害を修正: 管理画面のファビコンが v1 色のまま / `records/page.tsx` の hex 直書き / 44px 未満のタップ要素（写真の×ボタン 32px・パンくずリンク・ブランドリンク）
 
 ### 22（AI 下書き）で確立済み・触るときに壊さないこと
 
