@@ -16,20 +16,19 @@ export default async function EditClassPage({
 }) {
   const { id } = await params;
   const supabase = await createClient();
-  const { data: cls } = await supabase
-    .from("classes")
-    .select("*")
-    .eq("id", id)
-    .single();
+
+  // others は cls の結果ではなく URL の id にしか依存しないので、2本を並列で取る。
+  const [{ data: cls }, { data: others }] = await Promise.all([
+    supabase.from("classes").select("*").eq("id", id).single(),
+    // 重複の注意書き用。自分自身は除く（今の色のままなのに「重複」と言われないように）。
+    supabase
+      .from("classes")
+      .select("name, theme_color")
+      .eq("is_active", true)
+      .neq("id", id),
+  ]);
 
   if (!cls) notFound();
-
-  // 重複の注意書き用。自分自身は除く（今の色のままなのに「重複」と言われないように）。
-  const { data: others } = await supabase
-    .from("classes")
-    .select("name, theme_color")
-    .eq("is_active", true)
-    .neq("id", id);
 
   const usedColors = Object.fromEntries(
     (others ?? []).map((c) => [c.theme_color.toLowerCase(), c.name]),
