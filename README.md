@@ -54,12 +54,17 @@ NEXT_PUBLIC_SUPABASE_ANON_KEY=<anon (publishable) key>
 | `R2_BUCKET` | バケット名（例 `labocore-kiroku`） | 写真機能に必須 |
 | `R2_PUBLIC_BASE_URL` | r2.dev の公開 URL（例 `https://pub-xxxx.r2.dev`） | 写真機能に必須 |
 | `KIROKU_PASSWORD` | 生徒向けページ `/kiroku` の合言葉（「ほほえみ」）。[後述](#生徒向けページkiroku) | ✅（ローカル/本番とも） |
+| `GEMINI_API_KEY` | AI 下書き用の Gemini API キー（[後述](#ai-下書きgemini)）。**サーバー専用**（`NEXT_PUBLIC_` を付けない） | AI 下書きに必須 |
+| `GEMINI_MODEL` | 使うモデル ID。未設定なら `gemini-3.5-flash-lite` | 任意 |
 
 > R2 の5変数が未設定でもアプリは起動し、写真を扱わない画面は通常どおり動く。
 > 写真のアップロード時にだけ「R2 の環境変数が未設定です」というエラーになる。
 >
 > `KIROKU_PASSWORD` が未設定でも管理画面は通常どおり動くが、生徒向けページは
 > 合言葉画面から先へ進めなくなる（fail-closed）。
+>
+> `GEMINI_API_KEY` が未設定でも記録カードの作成・公開は通常どおり行える。
+> AI 下書きのボタンだけが「今使えません」と表示されて押せなくなる。
 
 ### 3. 開発サーバー
 
@@ -90,6 +95,7 @@ npm run dev
    - `CRON_SECRET` — keepalive cron の認証用（[後述](#supabase-スリープ防止keepalive-cron)）
    - `R2_*` の5変数 — 授業記録の写真用（[後述](#写真の保存先cloudflare-r2)）
    - `KIROKU_PASSWORD` — 生徒向けページの合言葉（[後述](#生徒向けページkiroku)）。**未設定のままだと生徒向けページが開けない**
+   - `GEMINI_API_KEY`（+ 任意で `GEMINI_MODEL`）— AI 下書き用（[後述](#ai-下書きgemini)）。未設定なら AI ボタンだけが無効になる
    - ※ Supabase の2つはローカルの `.env.local` と同じ値。anon（publishable）キーはクライアントに露出する前提のキーで、データ保護は Supabase 側の RLS が担う
 3. デプロイ後、本番 URL の `/login` から管理者ユーザーでログインできることを確認する
 4. 以降は `main` への push で自動デプロイされる
@@ -186,6 +192,43 @@ npm run verify:r2
 - アップロードは Server Action 経由で、**Vercel のリクエストボディ上限 4.5MB** に収める必要がある。
   そのため送信前にブラウザ側でも縮小している（`src/lib/image-client.ts`）
 
+## AI 下書き（Gemini）
+
+記録カードの作成画面（`/records/new`・`/records/[id]/edit`）で、**走り書きメモ + その日の写真**から
+「テーマ」「ひとことメモ」の下書きを作れる。Google の Gemini API（無料枠）を使う。
+
+### 使い方
+
+1. クラス・日付・写真を入れる
+2. 「AIに下書きを作ってもらう」の欄に走り書きのメモを書く（例: 「暑中見舞いをAIで作った。写真の入れ方でつまずく人が多かった」）
+3. ボタンを押すと数秒でテーマとひとことメモに反映される。既に文字が入っている場合は置き換え確認が出る
+4. **必ず読んで手直しし**、自分の操作で公開する（AI の出力が自動で公開されることはない）
+
+### 運用ルール（重要）
+
+- **個人情報を含むメモ・スクリーンショットを AI に送らない。** 無料枠に送信した入力は
+  Google の製品改善に利用されうる（公式の料金ページに明記されている）。
+  掲載写真は元々「顔・個人情報を写さない」運用なのでそのまま送れるが、この前提が崩れる素材は渡さない
+- AI の文章は必ず人が確認してから公開する。事実と違うことが書かれていたら直す
+- 送信する画像は長辺 768px に縮小してから送っている（通信量とトークンの節約）
+
+### モデルを差し替える
+
+Gemini は世代交代と旧モデルの提供終了が早い。コードにモデル ID は書かれていないので、
+**`GEMINI_MODEL` を書き換えて再デプロイするだけ**で移行できる（既定値は `src/lib/gemini.ts` の
+`DEFAULT_GEMINI_MODEL`）。無料枠があるのは Flash 系・Flash-Lite 系。
+現行のモデル ID と無料枠は <https://ai.google.dev/gemini-api/docs/models> と
+<https://ai.google.dev/gemini-api/docs/pricing> で確認する。
+
+### 疎通確認
+
+```bash
+npm run verify:gemini
+```
+
+キーが有効か・`GEMINI_MODEL` のモデルが実在するか・画像付きで下書きが返るかを、
+ブラウザなしで確かめる。モデルを差し替えたときと、「AI下書きが失敗する」の切り分けに使う。
+
 ## 生徒向けページ（`/kiroku`）
 
 生徒さんが授業の記録を見るページ。管理画面とは認証が別で、Supabase のアカウントは配らない。
@@ -222,3 +265,5 @@ npm run verify:r2
 - `npm run build` — 本番ビルド（Turbopack）
 - `npm run lint` — ESLint
 - `npm run icons` — 生徒向けアイコンの PNG を生成（`public/icons/kiroku-icon.svg` から）
+- `npm run verify:r2` — 写真の保存先（R2）の疎通確認
+- `npm run verify:gemini` — AI 下書き（Gemini）の疎通確認

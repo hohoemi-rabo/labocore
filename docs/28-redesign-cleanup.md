@@ -16,6 +16,7 @@
 - [ ] `DESIGN.md`（v1）を削除し、`DESIGN_v2.md` を `DESIGN.md` にリネームする（CLAUDE.md 等の参照箇所も更新）
 - [ ] CLAUDE.md を更新する: フェーズ2の構成・規約（/kiroku・/records・R2・Gemini・anon RLS・v2 デザインルール）を「確立済みパターン」として追記し、v1 前提の記述を除去する
 - [ ] SPEC.md をフェーズ2の as-built に更新する（新テーブル・RLS・画面・Server Action・環境変数・PWA・運用）
+  - §2 の環境変数表は **`R2_*` 5変数と `GEMINI_API_KEY` / `GEMINI_MODEL` が未記載**、§8 の Server Actions 一覧は **`/records` 配下（記録カード CRUD・`setRecordStatus`・`next-lessons`・`announcements`・`generateDraft`）が丸ごと未記載**。§4 の DB だけが同期済みなので、ここを揃える
 - [ ] REQUIREMENTS_phase2.md §17 未決事項を消し込む（AI モデル最終選定・過去記録の探し方の様子見結果など）
 - [ ] 最終動作確認: 全画面のスマホ/PC 表示・keepalive cron（Vercel Dashboard で実行履歴確認）・Supabase セキュリティアドバイザ
 

@@ -2,6 +2,7 @@ import Link from "next/link";
 import { notFound } from "next/navigation";
 import { createClient } from "@/lib/supabase/server";
 import { todayJst } from "@/lib/format";
+import { isGeminiConfigured } from "@/lib/gemini";
 import { ConfirmDialog } from "@/components/v2/confirm-dialog";
 import { sectionTitleClass, v2CanvasClass } from "@/components/v2/styles";
 import { RecordForm, type RecordClassOption } from "../../record-form";
@@ -51,6 +52,7 @@ export default async function EditRecordPage({
           action={updateRecord}
           classes={options}
           today={todayJst()}
+          aiEnabled={isGeminiConfigured()}
           defaultValues={{
             id: record.id,
             class_id: record.class_id,

@@ -1,6 +1,7 @@
 import Link from "next/link";
 import { createClient } from "@/lib/supabase/server";
 import { todayJst } from "@/lib/format";
+import { isGeminiConfigured } from "@/lib/gemini";
 import { sectionTitleClass, v2CanvasClass } from "@/components/v2/styles";
 import { RecordForm, type RecordClassOption } from "../record-form";
 import { createRecord } from "../actions";
@@ -34,6 +35,7 @@ export default async function NewRecordPage() {
             action={createRecord}
             classes={options}
             today={todayJst()}
+            aiEnabled={isGeminiConfigured()}
           />
         )}
       </div>

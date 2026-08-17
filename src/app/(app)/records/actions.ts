@@ -4,6 +4,11 @@ import { z } from "zod";
 import { redirect } from "next/navigation";
 import { createClient } from "@/lib/supabase/server";
 import { toFieldErrors, nullIfEmpty } from "@/lib/form";
+import {
+  GeminiDraftError,
+  MAX_NOTE_LENGTH,
+  generateRecordDraft,
+} from "@/lib/gemini";
 import { processImage } from "@/lib/image";
 import { deleteImage, uploadImage } from "@/lib/r2";
 import { MAX_PHOTOS } from "@/lib/records";
@@ -255,6 +260,99 @@ export async function setRecordStatus(
   // 公開状態が変わると anon から見えるかどうかが変わるので、生徒向けも再検証する。
   revalidateRecords();
   return {};
+}
+
+// ── AI 下書き（チケット22）─────────────────────────────────
+// 走り書きメモ + 写真から「テーマ」「ひとことメモ」の下書きを作る。
+// **DB は一切書き換えない**（フォームに反映するだけ・公開は人の操作）。
+// 失敗しても手入力での作成・公開が妨げられないよう、redirect せず結果を返す。
+
+const draftSchema = z.object({
+  note: z
+    .string()
+    .trim()
+    .min(1, "走り書きメモを入力してください")
+    .max(MAX_NOTE_LENGTH, "走り書きメモが長すぎます"),
+});
+
+export type DraftResult = { theme?: string; memo?: string; error?: string };
+
+export async function generateDraft(formData: FormData): Promise<DraftResult> {
+  const supabase = await createClient();
+
+  // このアクションは DB を書かないので RLS の後ろ盾が無く、middleware だけが唯一のゲートになる。
+  // 外部 API（無料枠）を叩くため、ここでも認証を確かめておく。
+  const { data: claims } = await supabase.auth.getClaims();
+  if (!claims?.claims) {
+    return { error: "ログインが切れています。読み込み直してください。" };
+  }
+
+  const parsed = draftSchema.safeParse({ note: formData.get("note") });
+  if (!parsed.success) {
+    return { error: parsed.error.issues[0]?.message ?? "入力が不正です。" };
+  }
+
+  const images = await collectDraftImages(formData, supabase);
+
+  try {
+    const draft = await generateRecordDraft({ note: parsed.data.note, images });
+    return draft;
+  } catch (error) {
+    if (error instanceof GeminiDraftError) {
+      return { error: error.message };
+    }
+    console.error("[records] AI 下書きの生成に失敗しました:", error);
+    return { error: "AI の下書きを作れませんでした。もう一度お試しください。" };
+  }
+}
+
+/**
+ * AI へ送る画像を集める（最大 MAX_PHOTOS 枚）。
+ *
+ * 保存済みの写真は**フォームの URL をそのまま取りに行かない**。細工したフォームで
+ * 任意の URL を取得させられるため、`updateRecord` と同じく「DB にある URL との積集合」を採る。
+ * 写真は任意なので、取得に失敗した1枚は落として続行する（メモだけでも下書きは作れる）。
+ */
+async function collectDraftImages(
+  formData: FormData,
+  supabase: Awaited<ReturnType<typeof createClient>>,
+): Promise<Buffer[]> {
+  const images: Buffer[] = [];
+
+  const recordId = String(formData.get("id") ?? "");
+  const submitted = formData.getAll("existing_image_urls").map(String);
+  if (recordId && submitted.length > 0) {
+    const { data: current } = await supabase
+      .from("lesson_records")
+      .select("image_urls")
+      .eq("id", recordId)
+      .maybeSingle();
+
+    for (const url of submitted.filter((u) =>
+      current?.image_urls.includes(u),
+    )) {
+      const buffer = await fetchImage(url);
+      if (buffer) images.push(buffer);
+    }
+  }
+
+  for (const file of photoFilesFrom(formData)) {
+    images.push(Buffer.from(await file.arrayBuffer()));
+  }
+
+  return images.slice(0, MAX_PHOTOS);
+}
+
+async function fetchImage(url: string): Promise<Buffer | null> {
+  try {
+    // タイムアウトを必ず付ける。R2 が応答しないと生成そのものが道連れになるため。
+    const response = await fetch(url, { signal: AbortSignal.timeout(10_000) });
+    if (!response.ok) throw new Error(`HTTP ${response.status}`);
+    return Buffer.from(await response.arrayBuffer());
+  } catch (error) {
+    console.error("[records] 保存済み写真を取得できませんでした:", url, error);
+    return null;
+  }
 }
 
 /**

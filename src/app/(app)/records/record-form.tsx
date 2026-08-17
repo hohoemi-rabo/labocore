@@ -12,6 +12,8 @@ import {
   errorBandClass,
 } from "@/components/v2/form";
 import { skyButtonClass } from "@/components/v2/styles";
+import { Toast, useToast } from "@/components/v2/toast";
+import { AiDraftPanel } from "./ai-draft-panel";
 import { PhotoPicker, type PickedPhoto } from "./photo-picker";
 import type { RecordFormState } from "./actions";
 
@@ -42,24 +44,33 @@ export function RecordForm({
   classes,
   defaultValues,
   today,
+  aiEnabled,
 }: {
   action: Action;
   classes: RecordClassOption[];
   defaultValues?: RecordDefaultValues;
   /** JST の今日。既定の日付に使う（サーバーで算出して渡す） */
   today: string;
+  /** AI 下書きが使えるか（GEMINI_API_KEY の有無。サーバーで判定して渡す） */
+  aiEnabled: boolean;
 }) {
   const [state, formAction, pending] = useActionState<
     RecordFormState,
     FormData
   >(action, {});
   const formRef = useRef<HTMLFormElement>(null);
+  const { message, showToast } = useToast();
 
   const [keptUrls, setKeptUrls] = useState<string[]>(
     defaultValues?.image_urls ?? [],
   );
   const [picked, setPicked] = useState<PickedPhoto[]>([]);
   const [photosBlocking, setPhotosBlocking] = useState(false);
+
+  // AI の下書きを流し込むため、テーマとメモだけ制御コンポーネントにする
+  // （非制御のままだと defaultValue を差し替えても再レンダーでは反映されない）。
+  const [theme, setTheme] = useState(defaultValues?.theme ?? "");
+  const [memo, setMemo] = useState(defaultValues?.memo ?? "");
 
   // スウォッチに選択中の色を映すためだけの state（select 自体は非制御のまま）
   const [classId, setClassId] = useState(
@@ -145,7 +156,8 @@ export function RecordForm({
           type="text"
           required
           placeholder="AIで暑中見舞いを作りました"
-          defaultValue={defaultValues?.theme}
+          value={theme}
+          onChange={(e) => setTheme(e.target.value)}
           className={inputClass}
         />
         {state.fieldErrors?.theme && (
@@ -162,7 +174,8 @@ export function RecordForm({
           name="memo"
           required
           placeholder="授業の様子が伝わるように2〜3文で。"
-          defaultValue={defaultValues?.memo}
+          value={memo}
+          onChange={(e) => setMemo(e.target.value)}
           className={textareaClass}
         />
         {state.fieldErrors?.memo && (
@@ -176,6 +189,21 @@ export function RecordForm({
         picked={picked}
         onPickedChange={setPicked}
         onBlockingChange={setPhotosBlocking}
+      />
+
+      <AiDraftPanel
+        enabled={aiEnabled}
+        recordId={defaultValues?.id}
+        picked={picked}
+        keptUrls={keptUrls}
+        currentTheme={theme}
+        currentMemo={memo}
+        onApply={(draft) => {
+          setTheme(draft.theme);
+          setMemo(draft.memo);
+          showToast("下書きを反映しました。手直しして保存してください。");
+        }}
+        onError={showToast}
       />
 
       <div className="flex flex-col gap-2">
@@ -216,6 +244,9 @@ export function RecordForm({
           写真を保存しています。そのままお待ちください。
         </p>
       )}
+
+      {/* トーストは画面に1つ（position: fixed なので複数置くと重なる） */}
+      <Toast message={message} />
     </form>
   );
 }

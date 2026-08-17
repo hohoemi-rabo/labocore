@@ -14,14 +14,14 @@ LaboCore（ラボコア）— シニア向けパソコン・スマホ教室「�
 
 **フェーズ1（チケット 01〜12）は実装完了し、本番運用中**。URL は https://labocore.vercel.app（Vercel・GitHub 連携で `main` push により自動デプロイ）。8画面（今日の出欠 / カレンダー / 月次集計 / 生徒・コマ・休講日管理 / 生徒詳細 / ログイン）が稼働し、Supabase スリープ防止の keepalive cron も稼働中（下記）。
 
-**フェーズ2「授業記録」はチケット 13〜28 に分割済み。13〜21 が実装完了し（M1 = 生徒向け一式が本番稼働）、次は 22 から着手する。** 現状の詳細は下記「フェーズ2の現状」、横断的な確定事項は「フェーズ2の実装方針」を参照。
+**フェーズ2「授業記録」はチケット 13〜28 に分割済み。13〜22 が実装完了し（M1 = 生徒向け一式が本番稼働）、次は 23 から着手する。** 現状の詳細は下記「フェーズ2の現状」、横断的な確定事項は「フェーズ2の実装方針」を参照。
 
 **M1 の実装は完了し本番稼働中**（合言葉 → クラスえらび → クラスページ、PWA でホーム画面追加可）。実機確認（Safari / Chrome のホーム画面追加・絵文字・プロンプトのコピー）も済んでいる。
 
 **運用者タスクの状況**: R2・`KIROKU_PASSWORD` の env（ローカル + Vercel Production）は設定済み。残っているのは:
 - (a) Supabase Dashboard での漏洩パスワード保護の有効化（フェーズ1からの積み残し・急ぎでない）
 - (b) **M1 のお披露目に必要な入力**: 水曜午後クラスの登録（#818cf8）/ 記録カード数件と「次回のじゅぎょう」の投入 / LINE 案内（文面のたたき台は `docs/21-kiroku-pwa-release.md`）/ 先行お披露目
-- (c) **チケット22 で必要になる `GEMINI_API_KEY` / `GEMINI_MODEL` の env 設定**
+- (c) **Vercel Production への `GEMINI_API_KEY` の設定**（ローカルの `.env.local` は設定済み。未設定でも記録カードの作成・公開は動き、AI 下書きボタンだけが無効になる。`GEMINI_MODEL` は任意）
 
 **注意: 本番の `lesson_records` / `announcements` は現在0件。** 生徒向けページを開くと空状態になる（不具合ではない）。22 の動作確認で記録カードが要るときは、管理画面から作るか一時データを入れて**後で必ず消す**（過去チケットではそうしている）。
 
@@ -39,6 +39,7 @@ LaboCore（ラボコア）— シニア向けパソコン・スマホ教室「�
 - `npm run build` — 本番ビルド（Turbopack）
 - `npm run lint` — ESLint 実行
 - `npm run verify:r2` — R2 の疎通確認（アップロード→取得→複製→削除→404 を通しで検査）
+- `npm run verify:gemini` — AI 下書きの疎通確認（キー・`GEMINI_MODEL` のモデル実在・画像付き生成をブラウザなしで検査）
 - `npm run icons` — 生徒向けアイコンの PNG を原本 SVG から焼き直す（`public/icons/kiroku-icon.svg` → 4種）
 - テストフレームワークは未導入
 
@@ -123,7 +124,7 @@ LaboCore（ラボコア）— シニア向けパソコン・スマホ教室「�
 - `src/app/(app)/attendance-board.tsx`（`useOptimistic`+`useTransition`+`useToast` の中心）/ `attendance-toggle.tsx`（出席｜欠席の2セグメント pill）/ `add-student.tsx`（別日来訪の追加）。`doneLabel`/`addLabel` で文言を差し替えて再利用する。
 - `src/app/(app)/summary/` — 月次集計。`setPayment` も同じ「redirect せず `{ error? }`・楽観的更新」パターン（`payments` を `onConflict: "student_id,target_month"` で upsert）。集計は `attendance_records` を月範囲取得し **JS 集約**（`unit_price_at_time` を合計＝スナップショット）。
 
-## フェーズ2の現状（13〜21 実装済み・22 から着手）
+## フェーズ2の現状（13〜22 実装済み・23 から着手）
 
 ### 追加済みの DB（14）
 
@@ -133,7 +134,7 @@ LaboCore（ラボコア）— シニア向けパソコン・スマホ教室「�
 - anon SELECT ポリシー: `classes`(is_active) / `closed_days`(全行) / `lesson_records`(published) / `announcements`(JST で掲載期間内)。**students・attendance_records・payments には付けない**
 - **⚠️ 新テーブルを足すときは `create table` と `enable row level security` を同一マイグレーションに入れる**。`public` の DEFAULT PRIVILEGES が anon に全権限を自動付与するため、分けるとその間だけ読み書き自由になる（SPEC.md §4.8）
 
-### 追加済みのライブラリ（13・15・16・17・19・20）
+### 追加済みのライブラリ（13・15・16・17・19・20・22）
 
 | ファイル | 中身 |
 |---|---|
@@ -148,6 +149,7 @@ LaboCore（ラボコア）— シニア向けパソコン・スマホ教室「�
 | `src/lib/image.ts` | `processImage` / `PUBLISH_MAX_EDGE`(1200) / `AI_MAX_EDGE`(768)（server-only） |
 | `src/lib/image-client.ts` | `shrinkImageInBrowser`（ブラウザ側の事前縮小） |
 | `src/lib/r2.ts` | `uploadImage` / `deleteImage` / `copyImage`（server-only） |
+| `src/lib/gemini.ts` | `generateRecordDraft` / `isGeminiConfigured` / `geminiModel` / `DEFAULT_GEMINI_MODEL` / `GeminiDraftError` / `SYSTEM_INSTRUCTION`（server-only・**モデル ID とプロンプトの単一の置き場**） |
 | `src/lib/format.ts` | 既存に加え `addDays` を追加 |
 | `src/components/v2/styles.ts` | `v2CanvasClass` / `entryCanvasClass` / `kirokuCanvasClass` / `entryBoxClass` / `glassCardClass` / `cardClass` / `accentCardClass` / `eyebrowClass`(+News/Prompt) / `sectionTitleClass` / `tricolorClass`(+Sm) / `accentButtonClass` / `skyButtonClass` / `entryButtonClass` / `copyButtonClass`(+Done) / `datePillClass` |
 | `src/components/v2/form.ts` | `labelClass` / `inputClass` / `selectClass` / `textareaClass` / `entryInputClass` / `errorClass` / `errorBandClass` |
@@ -155,14 +157,14 @@ LaboCore（ラボコア）— シニア向けパソコン・スマホ教室「�
 | `public/manifest.webmanifest` | 生徒向け PWA のマニフェスト（`(kiroku)/layout.tsx` の `metadata.manifest` から参照） |
 | `public/icons/` | `kiroku-icon.svg`（原本）+ 生成 PNG 4種。`scripts/build-icons.mts`（`npm run icons`）で焼く |
 
-`scripts/verify-r2.mts`（`npm run verify:r2`）は R2 の疎通確認ツール（常設）。
+`scripts/verify-r2.mts`（`npm run verify:r2`）と `scripts/verify-gemini.mts`（`npm run verify:gemini`）は疎通確認ツール（常設）。どちらも `--conditions=react-server` で実行するため、**そこから import される lib は拡張子付きの相対 import で書く**（`@/` の別名は Node が引けない）。
 
-### 追加済みの画面（16〜21・すべて v2 デザイン）
+### 追加済みの画面（16〜22・すべて v2 デザイン）
 
-管理側（16〜18）:
+管理側（16〜18・22）:
 
 - `/records` — 記録カード一覧（日付順フラット + クラス絞り込みタブ + 下書き↔公開のインライン切替）
-- `/records/new`・`/records/[id]/edit` — `RecordForm` + `PhotoPicker`
+- `/records/new`・`/records/[id]/edit` — `RecordForm` + `PhotoPicker` + `AiDraftPanel`（22）
 - `/records/next-lessons` — 全 active コマの「次回のじゅぎょう」をカード単位で編集
 - `/records/announcements`（+ `new`・`[id]/edit`）— 掲載中/掲載予定/期限切れの3セクション
 - ナビ（`src/components/nav/nav-items.ts`）に「記録」を追加済み
@@ -176,17 +178,20 @@ LaboCore（ラボコア）— シニア向けパソコン・スマホ教室「�
 - `(kiroku)/layout.tsx` — `metadata`（`robots: noindex` / `title.template` / `manifest` / `icons` / `appleWebApp`）と `viewport`（`themeColor` / `colorScheme`）と `dynamic = "force-dynamic"` だけの pass-through。**面は各ページが `entryCanvasClass` / `kirokuCanvasClass` で敷く**
 - PWA（21）— `/kiroku` をホーム画面に追加できる。マニフェストとアイコンは `public/` 配下（下記「PWA まわりの落とし穴」）
 
-### 22（AI 下書き）で必ず踏まえること
+### 22（AI 下書き）で確立済み・触るときに壊さないこと
 
-**着手前に最新の公式情報を Context7 で確認する。** SDK は `@google/genai` 系だが、Gemini は世代交代とモデル提供終了が早い。現行の推奨 Flash モデル ID・無料枠の条件・SDK の現行 API を必ず引き直してから書く（記憶で書かない）。
+走り書きメモ + 写真 → Gemini →「テーマ」「ひとことメモ」の下書き。`src/lib/gemini.ts`（生成）/ `records/actions.ts` の `generateDraft`（Server Action）/ `records/ai-draft-panel.tsx`（UI）の3枚構成。
 
-- **モデル ID をハードコードしない。** `GEMINI_MODEL` の env で切り替えられることが完了条件（`GEMINI_API_KEY` はサーバー専用・`NEXT_PUBLIC_` を付けない）。**両方とも未設定のまま**なので、着手時に運用者タスクとして依頼する
-- **画像は送信前に縮小する。** `src/lib/image.ts` の `processImage(buffer, { maxEdge: AI_MAX_EDGE })`（`AI_MAX_EDGE` = 768）がこのために用意してある。公開用の 1200px をそのまま送らない
-- **個人情報を含む素材を AI に送らない**（無料枠の入力は Google の製品改善に使われうる）。掲載写真は「顔なし・個人情報なし」運用なのでそのまま送れるが、この前提が崩れる素材を渡さない
-- **AI の出力を自動公開しない。** フォームに反映するだけで、公開は人の操作のみ（要件 §15）
-- **API キー未設定・API 障害でも手動作成と公開が一切妨げられないこと**（完了条件）。エラーは握りつぶさず、`src/components/v2/toast.tsx` の `useToast()` で分かりやすい文言を出す。トーストは画面に1つ
-- **⚠️ フォームへの反映方法に注意。** `record-form.tsx` は**非制御入力＋手動 dispatch**（下記「v2 画面のフォーム」）。AI の結果をテーマ・メモ欄に入れるには、その欄だけ制御コンポーネントにするか `ref` 経由で値を入れる必要がある。安易に `defaultValue` を差し替えても再レンダーでは反映されない。17 の「1画面に複数フォームを置くとき」の知見（サーバー値の署名が変わったときだけ追従させる）が近い
-- **`/records` 配下は `maxDuration = 60`** が `records/layout.tsx` に設定済み（Vercel の関数タイムアウト）。生成が長引くケースはここに収まるか確認する
+- **モデル ID とプロンプトは `src/lib/gemini.ts` にしか無い。** モデルは `GEMINI_MODEL`（未設定なら `DEFAULT_GEMINI_MODEL` = `gemini-3.5-flash-lite`）。**他の場所にモデル ID を書かない。** `GEMINI_API_KEY` はサーバー専用（`NEXT_PUBLIC_` を付けない）
+- **画像の縮小は `generateRecordDraft` の内側で必ず行う**（`AI_MAX_EDGE` = 768）。呼び出し側は元のバイト列を渡すだけにして、掲載用 1200px を誤って送る経路を作らない
+- **保存済み写真の URL をフォームから受け取ってそのまま fetch しない。** `updateRecord` と同じく「DB の `image_urls` との積集合」を採ってから取りに行く（任意 URL を取得させないため）
+- **`generateDraft` は自前で認証を確認する。** DB を書かない＝ RLS の後ろ盾が無く、middleware だけが唯一のゲートになるため（外部 API の濫用防止）。**同種の「DB を触らない Server Action」を足すときも同じことをする**
+- **エラーは `status`（HTTP ステータス）で分類する。クラス名（`ApiError` 等）に依存しない**（SDK の世代で構成が変わる）。文言は `GeminiDraftError.message` に載せ、Server Action がそのまま返し、UI はトーストに流すだけ
+- **API キー未設定でもボタン以外は完全に動く。** `isGeminiConfigured()` をページで読み `aiEnabled` として渡し、false のときはボタンを無効化して理由を出す（押しても無反応、にしない）
+- **テーマ・メモは制御コンポーネント**（AI の結果を流し込むため）。**それ以外は非制御＋手動 dispatch のまま**（「v2 画面のフォーム」の方針は変えていない）。走り書きメモの textarea には **`name` を付けない**（付けると保存時の `new FormData(form)` に混ざる）
+- 置き換え確認は `ai-draft-panel.tsx` 内の `<dialog>`。**`v2/confirm-dialog.tsx` は使えない**（自前の `<form>` を持つので `RecordForm` の `<form>` に入れ子にできず、プログラムから開く用途にも合わない）
+- **`npm run verify:gemini` でブラウザなしに通しで確認できる。** モデルを差し替えたとき・「AI下書きが失敗する」ときはまずこれを叩く
+- 実測: `gemini-3.5-flash-lite` + 768px 画像1枚で約2秒・1,434 トークン（`/records` の `maxDuration = 60` に対して十分内側）
 
 ### 19〜21（生徒向け一式）で確立済み・触るときに壊さないこと
 
@@ -229,7 +234,7 @@ LaboCore（ラボコア）— シニア向けパソコン・スマホ教室「�
   - `src/lib/image.ts` の `processImage(buffer, { maxEdge, quality })` で長辺 1200px（AI 送信用は `AI_MAX_EDGE`=768）+WebP 化 → `src/lib/r2.ts` の `uploadImage` で R2 へ保存し、DB には**完全な公開 URL** を持つ
   - 削除は `deleteImage`（ベストエフォート・DB 操作を巻き添えにしない）、他クラスコピー（23）は `copyImage` で R2 オブジェクトごと複製する。URL からキーを取る処理は**ホスト非依存**（配信先を移しても既存 URL が壊れない）
   - 表示は **`next/image` ではなく素の `<img loading="lazy">`**（変換済みなので再最適化不要・Vercel の画像変換枠を使わない）。疎通確認は `npm run verify:r2`。env は README 参照（未設定でもアプリは起動し、写真操作時のみ失敗する）
-- **AI 下書き**: Gemini Flash 系・無料枠運用。env `GEMINI_API_KEY` / `GEMINI_MODEL`（モデル ID のハードコード禁止・env で世代交代）。送信前に画像縮小（`AI_MAX_EDGE`=768）、出力は必ず人が確認して公開、API 障害時も手動入力で完結できること。個人情報を含む素材を AI に送らない。**詳細な申し送りは「22（AI 下書き）で必ず踏まえること」を参照**
+- **AI 下書き**（22 で実装済み）: Gemini Flash 系・無料枠運用。env `GEMINI_API_KEY` / `GEMINI_MODEL`（モデル ID のハードコード禁止・env で世代交代）。送信前に画像縮小（`AI_MAX_EDGE`=768）、出力は必ず人が確認して公開、API 障害時も手動入力で完結できること。個人情報を含む素材を AI に送らない。**詳細な申し送りは「22（AI 下書き）で確立済み・触るときに壊さないこと」を参照**
 - **M3 の段階刷新**: 画面単位で v2 へ置き換え・**1画面内の新旧混在は禁止**。シェル刷新（24）後、未刷新画面は暫定白面ラッパーで可読性を維持し 25〜27 で順次外す。28 で v1 トークン撤去・`DESIGN_v2.md` → `DESIGN.md` リネーム・SPEC.md / CLAUDE.md をフェーズ2 as-built に同期
 
 ## Next.js 15 App Router ベストプラクティス
