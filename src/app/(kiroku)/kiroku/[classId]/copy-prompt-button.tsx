@@ -11,7 +11,7 @@ const REVERT_MS = 2500;
 type State = "idle" | "done" | "failed";
 
 /**
- * プロンプトのコピーボタン（DESIGN_v2 §7）。生徒向けページ唯一のクライアント部品。
+ * プロンプトのコピーボタン（DESIGN §7）。生徒向けページ唯一のクライアント部品。
  *
  * 本文は prop で受け取る（サンプルの getElementById(pre).textContent は移植しない。
  * 記録がN件並ぶと id が衝突する）。

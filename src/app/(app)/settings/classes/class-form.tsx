@@ -169,7 +169,7 @@ export function ClassForm({
                   className="peer sr-only"
                 />
                 {/* 色は DB 由来の動的な値なのでクラス名に埋め込まず CSS 変数で注入する
-                    （DESIGN_v2 §9）。インライン hex は書かない。 */}
+                    （DESIGN §9）。インライン hex は書かない。 */}
                 <span
                   aria-hidden
                   style={accentStyle(c.value)}

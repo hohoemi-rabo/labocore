@@ -1,6 +1,4 @@
-// フォーム入力の共有スタイル v2（DESIGN_v2 §4・§8）。
-// v1 の src/components/ui/form.ts と同じ役割で、v2 の画面はこちらを使う
-// （v1 側は M3 完了＝チケット28 まで温存する）。
+// フォーム入力の共有スタイル（DESIGN.md §4・§8）。
 //
 // 入力欄は「くぼみ影 + フォーカスでアクセントの縁と 3px リング」。
 // 高さは 44px 以上（h-11）を守る。
@@ -19,7 +17,7 @@ export const selectClass = `${fieldBase} h-11 px-4 text-[17px]`;
 export const textareaClass = `${fieldBase} min-h-[120px] px-4 py-3 text-[17px] leading-jp`;
 
 /**
- * 入口画面（合言葉）の入力欄。DESIGN_v2 §7: 中央揃え 1.35rem（=23px）。
+ * 入口画面（合言葉）の入力欄。DESIGN §7: 中央揃え 1.35rem（=23px）。
  * h-11（44px）では 23px の文字に対して低すぎるため、サンプルの padding 相当で 56px を確保する。
  */
 export const entryInputClass = `${fieldBase} min-h-[56px] px-4 py-3 text-center text-[23px]`;

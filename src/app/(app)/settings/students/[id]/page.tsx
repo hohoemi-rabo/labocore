@@ -113,7 +113,7 @@ export default async function StudentDetailPage({
   return (
     <div className={`${v2CanvasClass} flex flex-col gap-8`}>
       <div className="flex flex-col gap-4">
-        <Link href="/settings/students" className="text-[15px] text-sub">
+        <Link href="/settings/students" className="inline-flex min-h-[44px] items-center text-[15px] text-sub">
           ‹ 生徒管理
         </Link>
         <div className="flex items-center justify-between gap-4">

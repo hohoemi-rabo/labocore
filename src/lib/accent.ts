@@ -1,6 +1,6 @@
 import type { CSSProperties } from "react";
 
-// DESIGN_v2 §3・§9: 生徒向け画面の差し色は「選択中クラスの theme_color」。
+// DESIGN §3・§9: 生徒向け画面の差し色は「選択中クラスの theme_color」。
 // 動的な hex をクラス名に埋め込むと Tailwind が拾えないため、CSS 変数 --accent を
 // style 属性で注入し、Tailwind 側は var(--accent) 参照のトークン
 // （accent / accent-soft / accent-deep / accent-line、bg-accent-fill、shadow-glow 等）を使う。
@@ -9,11 +9,11 @@ import type { CSSProperties } from "react";
 // color-mix() を実プロパティの値に直接置いているため、各要素が継承している
 // --accent に対して解決される（1画面に複数クラスの色が並ぶタブ・クラス選択でも正しく動く）。
 
-/** 管理画面の基本アクセント（DESIGN_v2 §8）。globals.css の :root と同値。 */
+/** 管理画面の基本アクセント（DESIGN §8）。globals.css の :root と同値。 */
 export const DEFAULT_ACCENT = "#38bdf8";
 
 /**
- * クラスのテーマカラー（DESIGN_v2 §3）。
+ * クラスのテーマカラー（DESIGN §3）。
  * 「明るく彩度の高い、ダーク背景で映える」帯から選ぶ。コマ管理の色選択はここから候補提示する。
  */
 export const CLASS_THEME_COLORS = [

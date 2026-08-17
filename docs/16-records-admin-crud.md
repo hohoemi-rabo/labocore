@@ -1,7 +1,7 @@
 # 16. 管理: 記録カード管理（ナビ「記録」新設・CRUD・写真アップロード）
 
 **依存**: 13, 14, 15
-**参照**: REQUIREMENTS_phase2.md §8.1 / DESIGN_v2.md §8 / SPEC.md §8（CRUD の型）
+**参照**: REQUIREMENTS_phase2.md §8.1 / DESIGN.md §8 / SPEC.md §8（CRUD の型）
 **マイルストーン**: M1
 
 ## 目的

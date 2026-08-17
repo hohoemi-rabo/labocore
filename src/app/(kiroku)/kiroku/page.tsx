@@ -13,7 +13,7 @@ import {
 } from "@/components/v2/styles";
 import { GateForm } from "./gate-form";
 
-// K1 合言葉画面（DESIGN_v2 §7）。
+// K1 合言葉画面（DESIGN §7）。
 // このページだけは middleware が Cookie なしでも通す。通過済みの人の行き先の判断も
 // ここに集約する（合言葉の Server Action 側では計算しない）。
 export default async function KirokuGatePage() {

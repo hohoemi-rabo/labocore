@@ -2,11 +2,11 @@ import { formatDateWithWeekday } from "@/lib/format";
 import { cardClass, datePillClass, eyebrowPromptClass } from "@/components/v2/styles";
 import { CopyPromptButton } from "./copy-prompt-button";
 
-// 記録カード1枚（DESIGN_v2 §7）。日付ピル → テーマ → メモ → 写真 → プロンプト。
+// 記録カード1枚（DESIGN §7）。日付ピル → テーマ → メモ → 写真 → プロンプト。
 //
 // hover の浮き上がりは意図的に付けていない。Tailwind 3.4 は hoverOnlyWhenSupported が
 // 既定オフで、タップすると hover が発火して貼り付いてしまう。記録カードは押せる要素では
-// ないので、動かすのはタブ・コピーボタン・フッターだけにする（DESIGN_v2 §6）。
+// ないので、動かすのはタブ・コピーボタン・フッターだけにする（DESIGN §6）。
 
 export type KirokuRecord = {
   id: string;

@@ -241,7 +241,7 @@ export function RecordForm({
         </button>
       </div>
       {pending && picked.length > 0 && (
-        <p className="text-[15px] text-sub">
+        <p className="inline-flex min-h-[44px] items-center text-[15px] text-sub">
           写真を保存しています。そのままお待ちください。
         </p>
       )}
@@ -252,7 +252,7 @@ export function RecordForm({
   );
 }
 
-/** 選択中クラスの色を小さな四角で見せる（DESIGN_v2 §3 のテーマカラー） */
+/** 選択中クラスの色を小さな四角で見せる（DESIGN §3 のテーマカラー） */
 function ClassSwatch({ color }: { color?: string }) {
   if (!color) return null;
 

@@ -6,10 +6,10 @@ import { navItems, isActive } from "./nav-items";
 
 // 管理画面の共通ヘッダー（チケット24）。
 // 生徒向けクラスページの kiroku-header.tsx と同じ文法に揃えてある
-// （sticky なガラス面 + ブランドマーク + タブ）。管理画面のアクセントはスカイ固定（DESIGN_v2 §8）。
+// （sticky なガラス面 + ブランドマーク + タブ）。管理画面のアクセントはスカイ固定（DESIGN §8）。
 //
 // PC の左サイドバー(220px)と純黒トップバー(44px)は 24 で廃止し、この1枚に統合した
-// （DESIGN_v2 §8 の「未確定: PC用サイドバー・純黒トップバーの扱い」の決定）。
+// （DESIGN §8 の「未確定: PC用サイドバー・純黒トップバーの扱い」の決定）。
 // タブは PC だけに出す。モバイルは下部タブ（bottom-tabs.tsx）が担う。
 //
 // ⚠️ position: sticky は**祖先**に overflow / transform / filter / contain が付くと
@@ -26,8 +26,11 @@ export function AppHeader() {
   return (
     <header className="sticky top-0 z-40 border-b border-line bg-ground/[0.82] px-4 py-3 backdrop-blur-[12px] md:px-8">
       <div className="mx-auto flex max-w-[980px] items-center gap-3">
-        <Link href="/" className="flex flex-none items-center gap-3">
-          {/* ブランドマーク。トリコロールをそのまま意匠として使う（DESIGN_v2 §2） */}
+        <Link
+          href="/"
+          className="flex min-h-[44px] flex-none items-center gap-3"
+        >
+          {/* ブランドマーク。トリコロールをそのまま意匠として使う（DESIGN §2） */}
           <span
             aria-hidden
             className="flex h-[38px] w-[38px] flex-none items-center justify-center rounded-12 bg-sky-fill shadow-glow-sky"

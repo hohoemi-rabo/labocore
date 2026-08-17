@@ -119,7 +119,7 @@ export default async function CalendarPage({
             const isToday = cell === today;
             const isSelected = cell === selectedDate;
 
-            // 日付の色分け（DESIGN_v2 §8・チケット25 で確定）:
+            // 日付の色分け（DESIGN §8・チケット25 で確定）:
             //   記録あり = スカイの点 / 休講 = ローズの点 + 取り消し線
             //   今日 = 数字がスカイの太字 / 選択中 = 淡い面 + スカイの縁
             // 縁は**全セルが透明で持つ**（選択時だけ足すと 1px ずれる）。
@@ -165,7 +165,7 @@ export default async function CalendarPage({
             aria-label="閉じる"
             className="fixed inset-0 z-40 bg-black/60"
           />
-          {/* パネルは不透明面（DESIGN_v2 §9: backdrop-blur はヘッダーと入口だけ）。
+          {/* パネルは不透明面（DESIGN §9: backdrop-blur はヘッダーと入口だけ）。
               PC では全高に出るのでヘッダーを覆うが、オーバーレイのクリックか
               「閉じる」で戻れるため導線は保たれる。 */}
           <div className="fixed inset-x-0 bottom-0 z-50 max-h-[85vh] overflow-y-auto rounded-t-26 border border-line bg-card shadow-elev-3 md:inset-y-0 md:left-auto md:right-0 md:max-h-none md:w-[440px] md:rounded-none md:border-y-0 md:border-l">
@@ -194,7 +194,7 @@ export default async function CalendarPage({
               ) : (
                 <>
                   {!day.hasClass && day.rows.length === 0 && (
-                    <p className="text-[15px] text-sub">
+                    <p className="inline-flex min-h-[44px] items-center text-[15px] text-sub">
                       この日はコマがありません。下のボタンから生徒を追加できます。
                     </p>
                   )}

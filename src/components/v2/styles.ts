@@ -1,10 +1,9 @@
-// DESIGN_v2 の共通スタイル。既存の src/components/ui/form.ts と同じく
-// 「クラス文字列の定数を素の要素に当てる」流儀に合わせている
+// DESIGN.md の共通スタイル。「クラス文字列の定数を素の要素に当てる」流儀で書く
 // （タグを選べる・追加クラスを足せる・"use client" 境界を作らない）。
 //
 // 文字サイズは px で書く。サンプル docs/design-sample.html の rem 値は
 // root 17px 前提で書かれているが、本プロジェクトの root は 16px のままなので
-// DESIGN_v2 §5 の rem→px 換算表に従って変換する（html を 17px にしてはいけない）。
+// DESIGN §5 の rem→px 換算表に従って変換する（html を 17px にしてはいけない）。
 
 // ── 面（キャンバス）─────────────────────────────────────────
 // 管理画面の共通シェル（`(app)/layout.tsx` のルート）。
@@ -46,7 +45,7 @@ export const accentCardClass =
 
 /**
  * 大型ヒーロー（月次集計の請求額）。面は accentCardClass と同じで、影だけ
- * DESIGN_v2 §4 の「大」を使う。
+ * DESIGN §4 の「大」を使う。
  * ⚠️ `${accentCardClass} shadow-elev-3` と後ろから足さないこと
  * （同じプロパティのユーティリティを2つ並べると、勝敗は Tailwind の出力順まかせになる）。
  */
@@ -54,7 +53,7 @@ export const heroCardClass =
   "rounded-20 border border-accent-line bg-card-accent shadow-elev-3";
 
 // ── テキスト ───────────────────────────────────────────────
-// eyebrow（DESIGN_v2 §5）。色は役割で固定する
+// eyebrow（DESIGN §5）。色は役割で固定する
 const eyebrowBase = "text-[12px] font-bold uppercase tracking-[.22em]";
 export const eyebrowClass = `${eyebrowBase} text-accent`;
 export const eyebrowNewsClass = `${eyebrowBase} text-news`;
@@ -83,13 +82,13 @@ const skyFill =
 /** 主要ボタン（生徒向け・クラス色で塗る） */
 export const accentButtonClass = `${buttonBase} rounded-16 bg-accent-fill shadow-glow-btn hover:-translate-y-0.5 hover:shadow-glow-btn-hover text-[20px]`;
 
-/** 主要ボタン（管理画面・スカイ固定。DESIGN_v2 §8） */
+/** 主要ボタン（管理画面・スカイ固定。DESIGN §8） */
 export const skyButtonClass = `${buttonBase} ${skyFill} rounded-16 text-[17px]`;
 
-/** 入口画面の主要ボタン（「開く」）。ボックス幅いっぱい・DESIGN_v2 §5 で 1.15rem = 20px */
+/** 入口画面の主要ボタン（「開く」）。ボックス幅いっぱい・DESIGN §5 で 1.15rem = 20px */
 export const entryButtonClass = `${buttonBase} ${skyFill} w-full rounded-16 text-[20px]`;
 
-// プロンプトのコピーボタン（DESIGN_v2 §7）。押すと2.5秒だけ完了状態に変わる。
+// プロンプトのコピーボタン（DESIGN §7）。押すと2.5秒だけ完了状態に変わる。
 // クラスは連結せず**文字列ごと差し替える**こと（bg-copy-fill と bg-done-fill を
 // 同時に当てると、どちらが勝つかが出力順まかせになる）。
 // 文言が長く 375px では2行になるため、モバイルは全幅 + 上下パディングで高さを稼ぐ。

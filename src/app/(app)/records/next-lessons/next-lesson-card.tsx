@@ -107,7 +107,7 @@ export function NextLessonCard({
             {formatTimeRange(cls.startTime, cls.endTime)}
           </span>
         )}
-        {isUnset && <span className="text-[15px] text-sub">未定</span>}
+        {isUnset && <span className="inline-flex min-h-[44px] items-center text-[15px] text-sub">未定</span>}
       </div>
 
       <div className="flex flex-col gap-4">

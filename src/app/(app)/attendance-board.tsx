@@ -119,7 +119,7 @@ export function AttendanceBoard({
       )}
 
       {allRecorded && (
-        // 役割色は「完了=緑」（DESIGN_v2 §2）。
+        // 役割色は「完了=緑」（DESIGN §2）。
         <div className="flex items-center justify-center gap-2 text-[15px] font-bold text-done">
           <DoneIcon />
           {doneLabel}

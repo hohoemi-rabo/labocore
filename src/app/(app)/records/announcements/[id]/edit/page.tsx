@@ -49,7 +49,7 @@ export default async function EditAnnouncementPage({
   return (
     <div className={v2CanvasClass}>
       <div className="mx-auto max-w-[680px]">
-        <Link href="/records/announcements" className="text-[15px] text-sub">
+        <Link href="/records/announcements" className="inline-flex min-h-[44px] items-center text-[15px] text-sub">
           ‹ お知らせ
         </Link>
 

@@ -1,5 +1,6 @@
 import Link from "next/link";
 import { createClient } from "@/lib/supabase/server";
+import { DEFAULT_ACCENT } from "@/lib/accent";
 import {
   sectionTitleClass,
   skyButtonClass,
@@ -34,7 +35,7 @@ export default async function RecordsPage() {
       id: r.id,
       classId: r.class_id,
       className: cls?.name ?? "（廃止されたクラス）",
-      themeColor: cls?.theme_color ?? "#38bdf8",
+      themeColor: cls?.theme_color ?? DEFAULT_ACCENT,
       lessonDate: r.lesson_date,
       theme: r.theme,
       photoCount: r.image_urls.length,

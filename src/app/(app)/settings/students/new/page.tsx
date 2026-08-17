@@ -21,7 +21,7 @@ export default async function NewStudentPage() {
 
   return (
     <div className={`${v2CanvasClass} flex max-w-[560px] flex-col gap-6`}>
-      <Link href="/settings/students" className="text-[15px] text-sub">
+      <Link href="/settings/students" className="inline-flex min-h-[44px] items-center text-[15px] text-sub">
         ‹ 生徒管理
       </Link>
 

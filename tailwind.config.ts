@@ -1,10 +1,9 @@
 import type { Config } from "tailwindcss";
 
 // ─────────────────────────────────────────────────────────────
-// デザイントークンは v1 / v2 が併存している（M3 完了＝チケット28 で v1 を撤去する）。
-//   v1 = DESIGN.md      … ライト基調・Action Blue 単色。未刷新のフェーズ1画面のみが使う
-//   v2 = DESIGN_v2.md   … ダーク基調・クラス別アクセント。フェーズ2の新規/刷新画面はすべてこちら
-// v1 のキーは 28 まで一切変更・削除しない（フェーズ1画面の見た目を変えないため）。
+// デザイントークンの正典は DESIGN.md（ダーク基調・クラス別アクセント）。
+// フェーズ1のライト基調（Action Blue 単色）のトークンは、全画面の刷新が終わった
+// チケット28 で撤去した（履歴は git log を参照）。
 //
 // 命名の落とし穴（Tailwind はユーティリティ接頭辞を複数セクションで共有する）:
 //   bg-*     … colors / backgroundImage を共有 → 同名キーは1クラスが両方を設定してしまう
@@ -37,25 +36,7 @@ export default {
   theme: {
     extend: {
       colors: {
-        // ── v1（DESIGN.md §1）— 28 で撤去 ─────────────────────
-        primary: "#0066cc", // Action Blue — 唯一のアクセント
-        "primary-focus": "#0071e3", // フォーカスリング
-        "primary-on-dark": "#2997ff", // ダークタイル上のリンク/アクセント
-        ink: "#1d1d1f", // 見出し・本文（near-black）
-        "ink-muted-80": "#333333",
-        "ink-muted-48": "#7a7a7a", // 補助テキスト・disabled
-        "body-muted": "#cccccc", // ダークタイル上のセカンダリ文字
-        hairline: "#e0e0e0", // カード枠線（1px）
-        "divider-soft": "#f0f0f0", // さらに薄い区切り
-        canvas: "#ffffff", // 基本背景
-        "canvas-parchment": "#f5f5f7", // セカンダリ背景・sticky バー
-        "surface-pearl": "#fafafc",
-        "surface-tile-1": "#272729", // ダークタイル（集計ヒーロー等）
-        "surface-tile-2": "#2a2a2c",
-        "surface-black": "#000000", // グローバルヘッダーのみ
-        "on-dark": "#ffffff",
-
-        // ── v2 基礎色（DESIGN_v2.md §2）─────────────────────
+        // ── 基礎色（DESIGN.md §2）─────────────────────
         // 仕様書の名前 → ここでの名前: bg→ground / text→fg / text-body→fg-body
         // （`base` は Tailwind 既定の text-base(font-size) と衝突するため使わない）
         ground: "#0b0d12", // ページ最下層の背景
@@ -67,13 +48,13 @@ export default {
         sub: "#9aa3b5", // 補助テキスト・キャプション（本文には使わない）
         line: "rgba(255,255,255,.08)", // 枠線・区切り（1px）
 
-        // ── v2 アクセント（動的・DESIGN_v2.md §2）───────────
+        // ── アクセント（動的・DESIGN.md §2）───────────
         accent: "var(--accent)",
         "accent-soft": accentMix(16, "transparent"), // フォーカスリング・淡い面
         "accent-deep": accentMix(55, "#000"), // グラデーションの濃色端（§2 の必須式）
         "accent-line": accentMix(45, "transparent"), // 次回カードの縁
 
-        // ── v2 機能色（DESIGN_v2.md §2）─────────────────────
+        // ── 機能色（DESIGN.md §2）─────────────────────
         // 役割で命名する（琥珀/紫/ローズではなく news/prompt/off）。
         // 色名にすると Tailwind 既定パレット（amber-500 等）と見分けがつかず、
         // 「役割外への流用禁止」が守れなくなるため。
@@ -91,12 +72,8 @@ export default {
       },
 
       borderRadius: {
-        // v1（DESIGN.md §3）— 28 で撤去
-        sm: "8px", // ユーティリティボタン
-        lg: "18px", // カード
-        // v1 / v2 共通
         pill: "9999px", // ピル（アクション・日付ピル・トリコロール）
-        // v2 段階制（DESIGN_v2.md §6）— 中間値を新造しない
+        // 段階制（DESIGN.md §6）— 中間値を新造しない
         "12": "12px", // タブ・小要素・エラー帯
         "14": "14px", // 写真フレーム
         "16": "16px", // 入力欄・主要ボタン・プロンプト枠
@@ -105,10 +82,9 @@ export default {
       },
 
       boxShadow: {
-        // v2 のみ（v1 は box-shadow 禁止・src 内に利用箇所ゼロ）。
         // Tailwind の shadow-* は box-shadow 全体を置換するため、
         // 「落ち影 + 上端インセットハイライト」は合成済みトークンとして登録する。
-        // DESIGN_v2.md §4 のレシピ外の値は新造しない
+        // DESIGN.md §4 のレシピ外の値は新造しない
         // （サンプルの中間値 14/34・18/44・12/30・10/26 はこの3段階に丸める）。
         "elev-1": "0 10px 24px rgba(0,0,0,.35)", // ボタン・小カード
         "elev-1-hover": "0 16px 32px rgba(0,0,0,.45)",
@@ -125,7 +101,7 @@ export default {
         glow: `0 8px 20px ${accentMix(40, "transparent")}`, // 日付ピル・ブランドマーク・アクティブタブ
         "glow-btn": `0 10px 24px ${accentMix(45, "transparent")}, 0 1px 0 rgba(255,255,255,.25) inset`,
         "glow-btn-hover": `0 14px 30px ${accentMix(45, "transparent")}, 0 1px 0 rgba(255,255,255,.25) inset`,
-        // 管理画面の主要ボタン（スカイ固定・DESIGN_v2 §8）
+        // 管理画面の主要ボタン（スカイ固定・DESIGN §8）
         "glow-sky":
           "0 10px 24px rgba(37,99,235,.4), 0 1px 0 rgba(255,255,255,.25) inset",
         "glow-sky-hover":
@@ -137,7 +113,7 @@ export default {
       },
 
       backgroundImage: {
-        // v2 のみ（DESIGN_v2.md §2・§4）。レシピ外のグラデーションを新造しない。
+        // DESIGN.md §2・§4。レシピ外のグラデーションを新造しない。
         // ブランドモチーフ（全画面共通）
         tricolor:
           "linear-gradient(90deg, #4fc3f7 0 33%, #1e5bd6 33% 66%, #e11d48 66% 100%)",
@@ -159,7 +135,7 @@ export default {
         "sky-fill": "linear-gradient(135deg, #38bdf8, #2563eb)",
         "copy-fill": "linear-gradient(135deg, #8b7cf6, #6d28d9)",
         "done-fill": "linear-gradient(135deg, #34d399, #059669)",
-        // DESIGN_v2 §8: 破壊的操作の確定ボタン。濃色端は accent と同じ 55% の式で導出する
+        // DESIGN §8: 破壊的操作の確定ボタン。濃色端は accent と同じ 55% の式で導出する
         "off-fill":
           "linear-gradient(135deg, #e11d48, color-mix(in srgb, #e11d48 55%, #000))",
         // 役割色の面
@@ -173,19 +149,8 @@ export default {
       },
 
       fontFamily: {
-        // v1（DESIGN.md §2）: Apple はネイティブ（SF Pro + ヒラギノ）、
-        // 非 Apple は next/font の Inter + Noto Sans JP に解決させる。28 で撤去
-        sans: [
-          "-apple-system",
-          "BlinkMacSystemFont",
-          '"SF Pro Text"',
-          '"Hiragino Sans"',
-          "var(--font-inter)",
-          "var(--font-noto-sans-jp)",
-          "system-ui",
-          "sans-serif",
-        ],
-        // v2（DESIGN_v2.md §5）: Noto Sans JP を欧文・和文とも主役にする
+        // DESIGN.md §5: Noto Sans JP を欧文・和文とも主役にする。
+        // フェーズ1の混成スタック（Apple ネイティブ + Inter）は 28 で撤去した。
         jp: [
           "var(--font-noto-sans-jp)",
           '"Hiragino Sans"',
@@ -196,7 +161,7 @@ export default {
       },
 
       lineHeight: {
-        // v2 のカード本文行間（DESIGN_v2.md §5）
+        // カード本文の行間（DESIGN.md §5）
         jp: "1.85",
       },
     },

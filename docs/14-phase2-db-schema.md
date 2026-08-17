@@ -1,7 +1,7 @@
 # 14. フェーズ2 DB スキーマ（テーブル追加・RLS・型再生成）
 
 **依存**: なし
-**参照**: REQUIREMENTS_phase2.md §6・§10 / SPEC.md §4・§13 / DESIGN_v2.md §3
+**参照**: REQUIREMENTS_phase2.md §6・§10 / SPEC.md §4・§13 / DESIGN.md §3
 **マイルストーン**: M1
 
 ## 目的
@@ -12,7 +12,7 @@
 
 - [x] `classes` に列追加: `theme_color` text NOT NULL DEFAULT '#38bdf8' / `next_lesson_date` date NULL / `next_lesson_theme` text NULL / `next_lesson_note` text NULL
   - `theme_color` には `^#[0-9a-fA-F]{6}$` の CHECK も付けた（この値は `accentStyle()` 経由で CSS 変数 `--accent` に直接入るため）
-- [x] 既存コマに DESIGN_v2.md §3 の対応表どおり `theme_color` を投入する（月=#f43f5e / 火=#fb923c / 水午前=#38bdf8 / 水午後=#818cf8 / 木=#34d399 / 金=#e879f9）
+- [x] 既存コマに DESIGN.md §3 の対応表どおり `theme_color` を投入する（月=#f43f5e / 火=#fb923c / 水午前=#38bdf8 / 水午後=#818cf8 / 木=#34d399 / 金=#e879f9）
   - **実際のコマは月〜金の午前5件のみで「水曜午後クラス」は未登録**。#818cf8 は将来枠として予約した（開講したらコマ管理画面から登録する。要件 §6 のとおり新規開発不要）。投入 SQL は weekday + start_time で振り分けているので、後から水曜午後が増えても正しい色が当たる
 - [x] `lesson_records` を作成: id uuid PK / class_id uuid NOT NULL FK→classes / lesson_date date NOT NULL / theme text NOT NULL / memo text NOT NULL / prompt text NULL / image_urls text[] DEFAULT '{}' / status text NOT NULL CHECK in ('draft','published') DEFAULT 'draft' / created_at・updated_at timestamptz DEFAULT now()
   - `image_urls` に `cardinality(image_urls) <= 2` の CHECK を追加（要件の「最大2枚」を DB でも担保。`array_length` は空配列で NULL を返すため使わない）

@@ -37,7 +37,7 @@ export default async function EditClassPage({
 
   return (
     <div className={`${v2CanvasClass} flex max-w-[520px] flex-col gap-6`}>
-      <Link href="/settings/classes" className="text-[15px] text-sub">
+      <Link href="/settings/classes" className="inline-flex min-h-[44px] items-center text-[15px] text-sub">
         ‹ コマ管理
       </Link>
 
@@ -61,7 +61,7 @@ export default async function EditClassPage({
       />
 
       <div className="mt-6 flex flex-col gap-3 border-t border-line pt-6">
-        <p className="text-[15px] text-sub">
+        <p className="inline-flex min-h-[44px] items-center text-[15px] text-sub">
           このコマを廃止すると一覧から外れます。過去の出欠・請求の履歴は残ります。
         </p>
         <ConfirmDialog

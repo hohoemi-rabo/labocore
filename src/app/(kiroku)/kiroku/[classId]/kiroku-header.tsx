@@ -2,7 +2,7 @@ import Link from "next/link";
 import { WEEKDAY_LABELS } from "@/lib/format";
 import { periodLabels, type KirokuClass } from "@/lib/kiroku/classes";
 
-// 生徒向けクラスページの sticky ヘッダー（DESIGN_v2 §7）。Server Component。
+// 生徒向けクラスページの sticky ヘッダー（DESIGN §7）。Server Component。
 //
 // ⚠️ position: sticky は**祖先**に overflow / transform / filter / contain が付くと
 //    黙って効かなくなる。「タブが横に溢れるから」とキャンバス側に overflow-x-hidden を

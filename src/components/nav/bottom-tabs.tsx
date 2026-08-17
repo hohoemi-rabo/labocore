@@ -6,7 +6,7 @@ import { navItems, isActive } from "./nav-items";
 
 // モバイル用下部タブ。24 で v2（ダーク・ガラス面）へ塗り替えた。
 // 構造・項目・タップ領域は v1 のまま（授業中のワンタップ操作を変えないため）。
-// 管理画面のアクセントはスカイ固定（DESIGN_v2 §8）。
+// 管理画面のアクセントはスカイ固定（DESIGN §8）。
 export function BottomTabs() {
   const pathname = usePathname();
 

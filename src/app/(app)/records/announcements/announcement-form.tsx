@@ -157,7 +157,7 @@ export function AnnouncementForm({
         </div>
       </div>
 
-      <p className="text-[15px] text-sub">
+      <p className="inline-flex min-h-[44px] items-center text-[15px] text-sub">
         この期間だけ生徒向けページに表示されます。期間が過ぎると自動で消えるので、
         あとから削除する必要はありません。
       </p>

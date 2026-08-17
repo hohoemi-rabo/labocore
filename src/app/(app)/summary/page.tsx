@@ -111,7 +111,7 @@ export default async function SummaryPage({
         <div className={`${tricolorSmClass} flex-none`} aria-hidden />
       </div>
 
-      {/* 請求額のヒーロー（DESIGN_v2 §8: アクセントの radial グローを持つ大型カード）。
+      {/* 請求額のヒーロー（DESIGN §8: アクセントの radial グローを持つ大型カード）。
           巨大数値は <Yen> を流用せず手書きする（Yen は本文サイズ向けの muted 前提）。 */}
       <section className={`${heroCardClass} px-5 py-10 text-center md:py-12`}>
         <div className="mx-auto flex max-w-[520px] items-center justify-between">

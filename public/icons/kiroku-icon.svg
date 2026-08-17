@@ -17,7 +17,7 @@
       <stop offset="0" stop-color="#38bdf8"/>
       <stop offset="1" stop-color="#1f6888"/>
     </linearGradient>
-    <!-- トリコロール（DESIGN_v2 §2 のブランドモチーフ）。
+    <!-- トリコロール（DESIGN §2 のブランドモチーフ）。
          同じ offset を2回置いて、グラデーションではなく3分割の帯にする。 -->
     <linearGradient id="tricolor" x1="0" y1="0" x2="1" y2="0">
       <stop offset="0" stop-color="#4fc3f7"/>

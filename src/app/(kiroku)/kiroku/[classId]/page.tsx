@@ -23,7 +23,7 @@ import { KirokuHeader } from "./kiroku-header";
 import { RecordCard, type KirokuRecord } from "./record-card";
 import { forgetClass } from "../actions";
 
-// K3 クラスページ（REQUIREMENTS_phase2 §7 / DESIGN_v2 §7）。
+// K3 クラスページ（REQUIREMENTS_phase2 §7 / DESIGN §7）。
 //
 // レンダー時に todayJst() を読んでよいのは、(kiroku)/layout.tsx の force-dynamic で
 // 必ず動的レンダリングになるため。**このルートに revalidate を足さないこと**

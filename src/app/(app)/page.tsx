@@ -26,7 +26,7 @@ export default async function TodayPage() {
         <div
           className={`${glassCardClass} flex min-h-[240px] flex-col items-center justify-center gap-2 px-6 py-12 text-center`}
         >
-          {/* 役割色「休み」= ローズ（DESIGN_v2 §2） */}
+          {/* 役割色「休み」= ローズ（DESIGN §2） */}
           <p className="text-[26px] font-black text-off">本日は休講日</p>
           {closed.reason && (
             <p className="text-[17px] text-sub">{closed.reason}</p>

@@ -46,14 +46,14 @@ export default async function EditRecordPage({
   return (
     <div className={v2CanvasClass}>
       <div className="mx-auto max-w-[680px]">
-        <Link href="/records" className="text-[15px] text-sub">
+        <Link href="/records" className="inline-flex min-h-[44px] items-center text-[15px] text-sub">
           ‹ 授業の記録
         </Link>
 
         <h1 className={`${sectionTitleClass} mt-4`}>記録を編集</h1>
 
         {/* 役割色は「完了=緑」を文字色で使う。面は既存の surface のまま
-            （DESIGN_v2 §2 に done の面・枠トークンは無い。新造しない） */}
+            （DESIGN §2 に done の面・枠トークンは無い。新造しない） */}
         {copied === "1" && (
           <p className="mb-5 rounded-12 border border-line bg-surface px-4 py-3 text-[17px] font-bold leading-jp text-done">
             複製しました。内容を手直ししてから公開してください。

@@ -184,7 +184,7 @@ function PhotoTile({
           type="button"
           onClick={onRemove}
           aria-label="この写真を外す"
-          className="flex h-8 w-8 flex-none items-center justify-center rounded-12 text-[17px] text-off transition active:scale-95"
+          className="flex h-11 w-11 flex-none items-center justify-center rounded-12 text-[17px] text-off transition active:scale-95"
         >
           ×
         </button>

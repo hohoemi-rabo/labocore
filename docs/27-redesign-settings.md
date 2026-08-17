@@ -1,7 +1,7 @@
 # 27. デザイン刷新: 設定4画面（ハブ・コマ・生徒・休講日）
 
 **依存**: 24
-**参照**: DESIGN_v2.md §8 / SPEC.md §7.5〜§7.8
+**参照**: DESIGN.md §8 / SPEC.md §7.5〜§7.8
 **マイルストーン**: M3
 
 ## 目的
@@ -16,7 +16,7 @@
 - [x] 生徒管理 `/settings/students`（一覧・検索・new・edit・`StudentForm`・`NoClassesNotice`）: 同上。検索入力もくぼみ影+リングに
 - [x] 生徒詳細 `/settings/students/[id]`: 台帳情報カード・月別出欠履歴表を v2 化する（金額の `tabular-nums` 維持）
 - [x] 休講日管理 `/settings/closed-days`: 一覧+埋め込みフォームを v2 化する（過去日の muted 減光は sub 色で表現）
-- [x] エラー文言はローズ・ラベル 14px/700 等、DESIGN_v2 §8 のフォーム規約に全フォームを合わせる
+- [x] エラー文言はローズ・ラベル 14px/700 等、DESIGN §8 のフォーム規約に全フォームを合わせる
   - フォーム全体のエラーは `errorBandClass`（ローズ帯）、フィールド単位は `errorClass`
 - [x] 挙動の維持を確認: 各 CRUD・検索絞り込み・論理削除（ConfirmDialog）・重複日付エラー・廃止済みコマの選択肢温存
   - 各 `actions.ts` は**一切変更していない**

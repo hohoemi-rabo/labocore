@@ -1,7 +1,7 @@
 # 19. 生徒向け /kiroku 入口（合言葉・クラスえらび・middleware）
 
 **依存**: 13, 14
-**参照**: REQUIREMENTS_phase2.md §4・§5・§7（K1/K2） / DESIGN_v2.md §7 / docs/design-sample.html
+**参照**: REQUIREMENTS_phase2.md §4・§5・§7（K1/K2） / DESIGN.md §7 / docs/design-sample.html
 **マイルストーン**: M1
 
 ## 目的

@@ -8,7 +8,7 @@ import {
 } from "@/components/v2/styles";
 import { chooseClass } from "../actions";
 
-// K2 クラスえらび（DESIGN_v2 §7）。
+// K2 クラスえらび（DESIGN §7）。
 //
 // このページはゲートを再チェックしない。middleware が唯一の判定者
 // （管理画面の (app) 配下がページ側でログイン確認をしないのと同じ考え方）。

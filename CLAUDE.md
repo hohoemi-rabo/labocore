@@ -4,26 +4,23 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 ## プロジェクト概要
 
-LaboCore（ラボコア）— シニア向けパソコン・スマホ教室「ほほ笑みラボ」の教室運営システム。フェーズ1は出欠記録・月謝計算・生徒台帳を扱う。利用者は管理者1名のみで、スマホ（授業中のワンタップ記録）と PC の両方で使うレスポンシブ必須のアプリ。
+LaboCore（ラボコア）— シニア向けパソコン・スマホ教室「ほほ笑みラボ」の教室運営システム。出欠記録・月謝計算・生徒台帳（フェーズ1）と、生徒向けの授業記録サイト（フェーズ2）を扱う。管理するのは先生1名で、スマホ（授業中のワンタップ記録）と PC の両方で使うレスポンシブ必須のアプリ。
 
-- **REQUIREMENTS.md** — フェーズ1の機能要件・データモデル・画面構成の正典
-- **REQUIREMENTS_phase2.md** — フェーズ2「授業記録（じゅぎょうのきろく）」の機能要件の正典。フェーズ2実装前に必ず参照する
-- **DESIGN.md** — フェーズ1デザインシステム（v1）。**27 で適用画面が無くなった**（撤去は 28）。歴史的経緯を追うとき以外は参照しない
-- **DESIGN_v2.md** — フェーズ2以降のデザイン正典（ダーク基調・クラスカラー）。見た目の正典は `docs/design-sample.html`。フェーズ2の新規画面・刷新画面はすべてこちらに従う
-- **SPEC.md** — 実装済み仕様書（as-built）。DB スキーマ・RLS・画面・Server Action・共通基盤の現状を一次情報と突き合わせて記述。**§4 の DB はフェーズ2分（`lesson_records` / `announcements` / `classes` の追加列 / anon ポリシー）まで同期済み**。設計時にまず参照する
+- **SPEC.md** — 実装済み仕様書（as-built）。DB スキーマ・RLS・画面・Server Action・共通基盤・デザイントークンの現状を一次情報と突き合わせて記述。**フェーズ1+2 の全体が同期済み**。設計時にまず参照する
+- **DESIGN.md** — デザインの正典（ダーク基調・クラスカラー）。見た目の正典は `docs/design-sample.html`。**旧称 `DESIGN_v2.md`**（フェーズ1のライト基調の仕様書は 28 で撤去した）
+- **REQUIREMENTS.md** — フェーズ1の機能要件の正典
+- **REQUIREMENTS_phase2.md** — フェーズ2「授業記録（じゅぎょうのきろく）」の機能要件の正典
 
-**フェーズ1（チケット 01〜12）は実装完了し、本番運用中**。URL は https://labocore.vercel.app（Vercel・GitHub 連携で `main` push により自動デプロイ）。8画面（今日の出欠 / カレンダー / 月次集計 / 生徒・コマ・休講日管理 / 生徒詳細 / ログイン）が稼働し、Supabase スリープ防止の keepalive cron も稼働中（下記）。
+**フェーズ1（チケット 01〜12）・フェーズ2（13〜28）とも実装完了し、本番運用中。** URL は https://labocore.vercel.app（管理画面）と https://labocore.vercel.app/kiroku （生徒向け）。Vercel・GitHub 連携で `main` push により自動デプロイ。Supabase スリープ防止の keepalive cron も稼働中（下記）。
 
-**フェーズ2「授業記録」はチケット 13〜28 に分割済み。13〜27 が実装完了し、管理画面は全画面 v2 になった（M1 = 生徒向け一式 / M2 = AI 下書き・他クラスコピー / M3 の刷新は 24〜27 で完了）。残るは 28（v1 の撤去とドキュメント同期）のみ。** 現状の詳細は下記「フェーズ2の現状」、横断的な確定事項は「フェーズ2の実装方針」を参照。
-
-**M1 の実装は完了し本番稼働中**（合言葉 → クラスえらび → クラスページ、PWA でホーム画面追加可）。実機確認（Safari / Chrome のホーム画面追加・絵文字・プロンプトのコピー）も済んでいる。
+**生徒向け一式は本番稼働中**（合言葉 → クラスえらび → クラスページ、PWA でホーム画面追加可）。実機確認（Safari / Chrome のホーム画面追加・絵文字・プロンプトのコピー）も済んでいる。
 
 **運用者タスクの状況**: R2・`KIROKU_PASSWORD` の env（ローカル + Vercel Production）は設定済み。残っているのは:
 - (a) Supabase Dashboard での漏洩パスワード保護の有効化（フェーズ1からの積み残し・急ぎでない）
-- (b) **M1 のお披露目に必要な入力**: 水曜午後クラスの登録（#818cf8）/ 記録カード数件と「次回のじゅぎょう」の投入 / LINE 案内（文面のたたき台は `docs/21-kiroku-pwa-release.md`）/ 先行お披露目
+- (b) **お披露目に必要な入力**: 水曜午後クラスの登録（#818cf8）/ 記録カード数件と「次回のじゅぎょう」の投入 / LINE 案内（文面のたたき台は `docs/21-kiroku-pwa-release.md`）/ 先行お披露目
 - (c) **Vercel Production への `GEMINI_API_KEY` の設定**（ローカルの `.env.local` は設定済み。未設定でも記録カードの作成・公開は動き、AI 下書きボタンだけが無効になる。`GEMINI_MODEL` は任意）
 
-**注意: 本番の `lesson_records` / `announcements` は現在0件。** 生徒向けページを開くと空状態になる（不具合ではない）。22 の動作確認で記録カードが要るときは、管理画面から作るか一時データを入れて**後で必ず消す**（過去チケットではそうしている）。
+**注意: 本番の `lesson_records` / `announcements` は現在0件。** 生徒向けページを開くと空状態になる（不具合ではない）。動作確認で記録カードが要るときは、管理画面から作るか一時データを入れて**後で必ず消す**（過去チケットではそうしている）。
 
 ## チケット運用（docs/）
 
@@ -103,7 +100,7 @@ LaboCore（ラボコア）— シニア向けパソコン・スマホ教室「�
 
 - Server Action は Zod `safeParse` → 失敗時 `issue.path[0]` でフィールド別に集約して early return（`{ fieldErrors, formError }`）。成功時 `revalidatePath` → `redirect`。
 - 任意テキストは保存前に空文字→null 化（`nullIfEmpty`）。
-- 削除は論理削除（`is_active=false`）＋ 確認ダイアログ必須。確認ダイアログは `src/components/v2/confirm-dialog.tsx`（v1 版は 27 で使われなくなった。削除は 28）。
+- 削除は論理削除（`is_active=false`）＋ 確認ダイアログ必須（`src/components/v2/confirm-dialog.tsx`）。
 - **フォームの送信は全画面で手動 dispatch**（27 で統一済み）。`<form action={formAction}>` は使わない（下記「フェーズ2の実装方針」）。
 
 ### 共有ユーティリティ / コンポーネント
@@ -123,7 +120,7 @@ LaboCore（ラボコア）— シニア向けパソコン・スマホ教室「�
 - `src/app/(app)/attendance-board.tsx`（`useOptimistic`+`useTransition`+`useToast` の中心）/ `attendance-toggle.tsx`（出席｜欠席の2セグメント pill）/ `add-student.tsx`（別日来訪の追加）。`doneLabel`/`addLabel` で文言を差し替えて再利用する。
 - `src/app/(app)/summary/` — 月次集計。`setPayment` も同じ「redirect せず `{ error? }`・楽観的更新」パターン（`payments` を `onConflict: "student_id,target_month"` で upsert）。集計は `attendance_records` を月範囲取得し **JS 集約**（`unit_price_at_time` を合計＝スナップショット）。
 
-## フェーズ2の現状（13〜27 実装済み・28 から着手）
+## フェーズ2の構成（13〜28・すべて実装済み）
 
 ### 追加済みの DB（14）
 
@@ -150,11 +147,10 @@ LaboCore（ラボコア）— シニア向けパソコン・スマホ教室「�
 | `src/lib/r2.ts` | `uploadImage` / `deleteImage` / `copyImage`（server-only） |
 | `src/lib/gemini.ts` | `generateRecordDraft` / `isGeminiConfigured` / `geminiModel` / `DEFAULT_GEMINI_MODEL` / `GeminiDraftError` / `SYSTEM_INSTRUCTION`（server-only・**モデル ID とプロンプトの単一の置き場**） |
 | `src/lib/format.ts` | 既存に加え `addDays`（20）/ `nextWeekdayOnOrAfter`（23・コピー先クラスの曜日に日付を合わせる）を追加 |
-| `src/components/legacy-panel.tsx` | `LegacyPanel`（24・**移行期間だけの白面ラッパー**。25〜27 で外し 28 で残骸ゼロを確認） |
 | `src/components/nav/app-header.tsx` | 管理画面の共通ヘッダー（24。sidebar.tsx を置き換え） |
 | `src/components/v2/styles.ts` | `appShellClass`(24) / `v2CanvasClass` / `entryCanvasClass` / `kirokuCanvasClass` / `entryBoxClass` / `glassCardClass` / `cardClass` / `accentCardClass` / `eyebrowClass`(+News/Prompt) / `sectionTitleClass` / `tricolorClass`(+Sm) / `accentButtonClass` / `skyButtonClass` / `entryButtonClass` / `copyButtonClass`(+Done) / `datePillClass` |
 | `src/components/v2/form.ts` | `labelClass` / `inputClass` / `selectClass` / `textareaClass` / `entryInputClass` / `errorClass` / `errorBandClass` |
-| `src/components/v2/confirm-dialog.tsx`・`toast.tsx` | v2 版（v1 版はダーク面で読めない。**v2 画面では必ず v2 版を import する**） |
+| `src/components/v2/confirm-dialog.tsx`・`toast.tsx` | 確認ダイアログ（自前の `<form>` を持つ・入れ子にしない）とトースト（`position: fixed` なので**画面に1つ**） |
 | `public/manifest.webmanifest` | 生徒向け PWA のマニフェスト（`(kiroku)/layout.tsx` の `metadata.manifest` から参照） |
 | `public/icons/` | `kiroku-icon.svg`（原本）+ 生成 PNG 4種。`scripts/build-icons.mts`（`npm run icons`）で焼く |
 
@@ -167,14 +163,18 @@ LaboCore（ラボコア）— シニア向けパソコン・スマホ教室「�
 - `(app)/layout.tsx` — `appShellClass`（ダーク面 + アンビエント）+ `AppHeader`（sticky ガラス・PC はタブ入り）+ `BottomTabs`（モバイル）。**PC の左サイドバーと純黒トップバーは廃止**
 - `(auth)/login` — 入口ボックス文法（トリコロール → LABOCORE → 教室運営システム）。フォームは手動 dispatch
 
-刷新済みのフェーズ1画面（25〜27・これで管理画面は全面 v2）:
+刷新済みのフェーズ1画面（25〜27）:
 
 - `/`（今日の出欠）・`/calendar`（25）— 出欠まわりの共通部品（`attendance-board` / `attendance-toggle` / `add-student`）ごと v2 化
-- `/summary`（26）— ヒーローを `heroCardClass`（アクセントの radial グロー + 影「大」）に。`<Yen>` の「¥」は白面・ダーク面の両対応のため `opacity-60` に変更
+- `/summary`（26）— ヒーローを `heroCardClass`（アクセントの radial グロー + 影「大」）に。`<Yen>` の「¥」は `opacity-60`
 - `/settings` 配下8ページ（27）— ハブ・コマ・生徒・生徒詳細・休講日。3つのフォームを手動 dispatch に移行
 - いずれも**データ取得・集計・楽観的更新・CRUD の作りは無変更**（見た目と送信方式だけ）
-- **`LegacyPanel` の利用箇所はゼロになった**。以下は 28 で削除する未使用ファイル:
-  `src/components/legacy-panel.tsx` / `src/components/confirm-dialog.tsx` / `src/components/toast.tsx` / `src/components/ui/form.ts`
+
+仕上げ（28）:
+
+- v1 のトークン・部品（`legacy-panel` / `confirm-dialog` / `toast` / `ui/form`）・Inter フォント・v1 デザイン仕様書を**すべて撤去**。`DESIGN_v2.md` を `DESIGN.md` にリネームした
+- `body` を常時ダークにしたので `body:has(.v2-canvas)` の出し分けは廃止（`v2-canvas` クラス自体は各キャンバスに残っている）
+- 全体 grep 監査で見つけた実害を修正: 管理画面のファビコンが v1 色のまま / `records/page.tsx` の hex 直書き / 44px 未満のタップ要素（写真の×ボタン 32px・パンくずリンク・ブランドリンク）
 
 管理側（16〜18・22）:
 
@@ -222,9 +222,9 @@ LaboCore（ラボコア）— シニア向けパソコン・スマホ教室「�
 
 - **ダークの地色・アンビエントはシェル（`appShellClass`）だけが持つ。** ページ側の `v2CanvasClass` はタイポグラフィだけになった。ページで `bg-ground` を敷き直さない（二重になる）
 - **⚠️ シェルのツリーに `overflow-*` / `transform` / `filter` を足さない。** 祖先に付くとヘッダーの `position: sticky` が**エラーも警告も無く**効かなくなる（生徒向けヘッダーと同じ落とし穴）
-- **`LegacyPanel` は移行期間だけの足場だった。25〜27 ですべて外れ、利用箇所はゼロ**（`calendar` / `summary` / `settings` の暫定 `layout.tsx` は削除済み）。**28 で `src/components/legacy-panel.tsx` をファイルごと削除**し、`grep -r LegacyPanel src/` がゼロになることを確認する
+- **`LegacyPanel`（移行期間の白面ラッパー）は 28 で撤去済み**。同じ手（未刷新画面を暫定ラッパーで包み、画面ごとに外す）は段階移行の型として再利用できる
 - **管理画面のアクセントはスカイ固定**（`bg-sky-fill` / `shadow-glow-sky`）。`--accent` を使うのはクラス文脈がある場所だけ（記録一覧のクラスタブなど）
-- v1 の `confirm-dialog.tsx` / `toast.tsx` / `ui/form.ts` は**まだ使われている**（`LegacyPanel` の中の画面が使う）。撤去は 28
+- 確認ダイアログ・トースト・フォーム部品は `src/components/v2/` の1系統だけ（v1 版は 28 で撤去済み）
 
 ### 19〜21（生徒向け一式）で確立済み・触るときに壊さないこと
 
@@ -248,9 +248,9 @@ LaboCore（ラボコア）— シニア向けパソコン・スマホ教室「�
 
 ## フェーズ2の実装方針（チケット 13〜28 分割時に確定済み）
 
-機能要件は REQUIREMENTS_phase2.md、デザインは DESIGN_v2.md + `docs/design-sample.html`（見た目の正典）。以下はチケット分割時のヒアリングで確定した横断事項（詳細は各チケット）。
+機能要件は REQUIREMENTS_phase2.md、デザインは DESIGN.md + `docs/design-sample.html`（見た目の正典）。以下はチケット分割時のヒアリングで確定した横断事項（詳細は各チケット）。
 
-- **マイルストーン**: M1=13〜21（生徒向け `/kiroku` 一式+管理入力。ここで先行お披露目）**完了** / M2=22〜23（Gemini AI 下書き・他クラスコピー）**完了** / M3=24〜28（既存管理画面の v2 刷新・v1 撤去）。13→14→15 は並行可
+- **マイルストーン**: M1=13〜21（生徒向け `/kiroku` 一式+管理入力）/ M2=22〜23（Gemini AI 下書き・他クラスコピー）/ M3=24〜28（既存管理画面の v2 刷新・v1 撤去）。**すべて完了**
 - **サイト名**: 「ほほ笑みラボ 授業の記録」で確定。合言葉は「ほほえみ」= env `KIROKU_PASSWORD`（httpOnly Cookie・有効期限1年目安）。PWA アイコンは実装時にデザインシステム準拠で作成（後日差し替え可）
 - **ルーティング**: `(kiroku)` route group・全ページ noindex。`/kiroku`（合言葉）→ `/kiroku/select`（クラスえらび）→ `/kiroku/[classId]`（クラスページ）。middleware は `/kiroku` 配下を Supabase Auth 対象から外し**合言葉 Cookie で判定**する（`/api/keepalive` 除外を壊さないこと）。タブ切替では「自分のクラス」の記憶 Cookie を変更しない（選び直しはフッター導線）
 - **anon RLS**: `lesson_records` は published のみ / `announcements` は掲載期間内のみ（日付判定は `(now() AT TIME ZONE 'Asia/Tokyo')::date`。UTC の `current_date` を使わない）/ `classes` は is_active / `closed_days` は全行。**students・attendance_records・payments の anon 完全遮断は変更しない**
@@ -270,7 +270,7 @@ LaboCore（ラボコア）— シニア向けパソコン・スマホ教室「�
   - 削除は `deleteImage`（ベストエフォート・DB 操作を巻き添えにしない）、他クラスコピー（23）は `copyImage` で R2 オブジェクトごと複製する。URL からキーを取る処理は**ホスト非依存**（配信先を移しても既存 URL が壊れない）
   - 表示は **`next/image` ではなく素の `<img loading="lazy">`**（変換済みなので再最適化不要・Vercel の画像変換枠を使わない）。疎通確認は `npm run verify:r2`。env は README 参照（未設定でもアプリは起動し、写真操作時のみ失敗する）
 - **AI 下書き**（22 で実装済み）: Gemini Flash 系・無料枠運用。env `GEMINI_API_KEY` / `GEMINI_MODEL`（モデル ID のハードコード禁止・env で世代交代）。送信前に画像縮小（`AI_MAX_EDGE`=768）、出力は必ず人が確認して公開、API 障害時も手動入力で完結できること。個人情報を含む素材を AI に送らない。**詳細な申し送りは「22（AI 下書き）で確立済み・触るときに壊さないこと」を参照**
-- **M3 の段階刷新**: 画面単位で v2 へ置き換え・**1画面内の新旧混在は禁止**。シェル刷新（24・完了）後、未刷新画面は `LegacyPanel`（暫定白面ラッパー）で可読性を維持し 25〜27 で順次外す。28 で v1 トークン撤去・`DESIGN_v2.md` → `DESIGN.md` リネーム・SPEC.md / CLAUDE.md をフェーズ2 as-built に同期
+- **M3 の段階刷新（完了）**: 画面単位で v2 へ置き換え・**1画面内の新旧混在は禁止**。シェル刷新（24）→ 未刷新画面を `LegacyPanel`（暫定白面ラッパー）で保護 → 25〜27 で画面ごとに外す → 28 で v1 撤去とドキュメント同期、という順で進めた
 
 ## Next.js 15 App Router ベストプラクティス
 
@@ -304,27 +304,23 @@ LaboCore（ラボコア）— シニア向けパソコン・スマホ教室「�
 
 ## デザインルール
 
-**DESIGN_v2.md が全画面の正典**。27 で管理画面の刷新が終わり、**v1 デザインの画面はもう1つも無い**（v1 トークンと DESIGN.md の撤去は 28）。1画面内の新旧混在は禁止。
+**DESIGN.md が全画面の正典**（旧 `DESIGN_v2.md`）。フェーズ1のライト基調のトークン・部品・仕様書は 28 で撤去済みで、**参照すべき「旧デザイン」はもう存在しない**。
 
-### 両世代共通の不変ルール
+### 不変ルール
 
 - タップ要素は最小 44×44px・`active:scale-95`。出欠タップ等は楽観的更新（即時反映 → 失敗時トースト+ロールバック）
 - 本文は 17px 基準・16px 以下の本文禁止。数字・金額・日付は `tabular-nums` 必須
 - カラー・影・角丸はトークンを `tailwind.config.ts` の `theme.extend` に登録して使い、**インライン hex 禁止**
 - レスポンシブ（375px〜）
 
-### v2（DESIGN_v2.md — 新規/刷新画面）
+### 守るルール（DESIGN.md）
 
 - ダーク基調 `#0b0d12` + クラス別アクセント。DB の `classes.theme_color` を **`accentStyle()`（`src/lib/accent.ts`）で CSS 変数 `--accent` に注入**し、Tailwind は `var(--accent)` 参照トークンを使う（動的 hex をクラス名に埋め込まない）。濃色端は `color-mix(in srgb, var(--accent) 55%, #000)` で導出
-- 影・グラデーションは DESIGN_v2 §4 のレシピ内のみ（レシピ外の新造禁止）。角丸は 12/14/16/20/26/999 の段階制
+- 影・グラデーションは DESIGN §4 のレシピ内のみ（レシピ外の新造禁止）。角丸は 12/14/16/20/26/999 の段階制
 - 役割色は固定: お知らせ=琥珀 / プロンプト=紫 / 休み・エラー=ローズ / 完了=緑。役割外への流用禁止
 - フォントは Noto Sans JP（**可変フォント**で読み込み済み）。管理画面の基本アクセントはスカイ `#38bdf8` 固定・生徒向けは選択中クラスの色
-- **トークン名は DESIGN_v2 §2 の対応表を見る**（仕様書の名前と Tailwind のキー名が一部異なる）。主なもの: 面 `bg-ground` / `bg-surface` / `bg-surface-2` / `bg-sunken`、文字 `text-fg` / `text-fg-body` / `text-sub`、枠 `border-line`、アクセント `accent` / `accent-soft` / `accent-deep` / `accent-line`、役割色は**色名ではなく役割名** `news` / `prompt` / `off` / `done`、影 `shadow-elev-1〜3` / `shadow-well` / `shadow-glow*`、塗り `bg-accent-fill` / `bg-sky-fill` / `bg-card` / `bg-glass` / `bg-tricolor`
+- **トークン名は DESIGN §2 の対応表を見る**（仕様書の名前と Tailwind のキー名が一部異なる）。主なもの: 面 `bg-ground` / `bg-surface` / `bg-surface-2` / `bg-sunken`、文字 `text-fg` / `text-fg-body` / `text-sub`、枠 `border-line`、アクセント `accent` / `accent-soft` / `accent-deep` / `accent-line`、役割色は**色名ではなく役割名** `news` / `prompt` / `off` / `done`、影 `shadow-elev-1〜3` / `shadow-well` / `shadow-glow*`、塗り `bg-accent-fill` / `bg-sky-fill` / `bg-card` / `bg-glass` / `bg-tricolor`
 - **`accent` 系トークンに opacity modifier（`bg-accent-soft/50`）を使わない。** Tailwind が `color-mix()` をパースできず、**CSS が1行も出力されずに黙って消える**。透明度は `color-mix` の % 側で表現する
 - **同じプロパティのユーティリティを2つ並べない（19 で判明・20 で角丸にも拡大）。** `${inputClass} text-[23px]` のように後ろへ足しても勝つとは限らない（class 属性の並び順は無関係で、Tailwind が出力する CSS の順序で決まる）。`src/components/v2/{styles,form}.ts` の private な base（`fieldBase` / `buttonBase`）は**文字サイズも角丸も持たない**設計にしてあるので、別サイズ・別角丸が要る画面はそこから新しい定数を派生させる（`entryInputClass` / `entryButtonClass` / `copyButtonClass` が前例）
 - **`<pre>` には `font-jp` を明示する（20 で判明）。** Tailwind の preflight が `code, kbd, samp, pre` に `fontFamily.mono` を当てるため、指定しないと日本語が等幅フォールバックで崩れる。あわせて `whitespace-pre-wrap break-words`（375px で長い URL が溢れない）
-- **hover の動きは押せる要素だけに付ける（20 で判明）。** Tailwind 3.4 は `hoverOnlyWhenSupported` が既定オフ（v4 で既定になった）なので、`hover:-translate-y-*` はタップでも発火して貼り付く。カードなど押せない要素に付けない（DESIGN_v2 §6）
-
-### v1（DESIGN.md — **適用画面はもう無い**。28 で撤去する）
-
-- アクセントは Action Blue `#0066cc` の1色のみ・セマンティックカラー禁止 / box-shadow・グラデーション禁止（階層は面の色替え+1px ヘアライン）/ 角丸 8/18/pill の3値 / ウェイト 400/600 のみ
+- **hover の動きは押せる要素だけに付ける（20 で判明）。** Tailwind 3.4 は `hoverOnlyWhenSupported` が既定オフ（v4 で既定になった）なので、`hover:-translate-y-*` はタップでも発火して貼り付く。カードなど押せない要素に付けない（DESIGN §6）

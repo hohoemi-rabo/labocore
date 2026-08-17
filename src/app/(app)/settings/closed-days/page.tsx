@@ -21,7 +21,7 @@ export default async function ClosedDaysPage() {
 
   return (
     <div className={`${v2CanvasClass} flex flex-col gap-6`}>
-      <Link href="/settings" className="text-[15px] text-sub">
+      <Link href="/settings" className="inline-flex min-h-[44px] items-center text-[15px] text-sub">
         ‹ 設定
       </Link>
 

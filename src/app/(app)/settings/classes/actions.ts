@@ -13,7 +13,7 @@ const classSchema = z
     weekday: z.coerce.number().int().min(0).max(6),
     start_time: z.string().regex(/^\d{2}:\d{2}$/, "開始時間を入力してください"),
     end_time: z.string().regex(/^\d{2}:\d{2}$/, "終了時間を入力してください"),
-    // 生徒向け画面の差し色（DESIGN_v2 §3）。CSS 変数へ注入される値なので形を検証する。
+    // 生徒向け画面の差し色（DESIGN §3）。CSS 変数へ注入される値なので形を検証する。
     // DB の CHECK は大文字も通すが、CLASS_THEME_COLORS との照合は大小文字を区別するため
     // ここで小文字に正規化しておく。
     theme_color: z

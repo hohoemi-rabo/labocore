@@ -56,7 +56,7 @@ export default async function AnnouncementsPage() {
   return (
     <div className={v2CanvasClass}>
       <div className="mx-auto max-w-[680px]">
-        <Link href="/records" className="text-[15px] text-sub">
+        <Link href="/records" className="inline-flex min-h-[44px] items-center text-[15px] text-sub">
           ‹ 授業の記録
         </Link>
 
@@ -138,10 +138,10 @@ function Section({
                     style={accentStyle(r.themeColor)}
                     className="h-3 w-3 flex-none rounded-pill bg-accent"
                   />
-                  <span className="text-[15px] text-sub">{r.className}</span>
+                  <span className="inline-flex min-h-[44px] items-center text-[15px] text-sub">{r.className}</span>
                 </>
               ) : (
-                <span className="text-[15px] text-sub">全体向け</span>
+                <span className="inline-flex min-h-[44px] items-center text-[15px] text-sub">全体向け</span>
               )}
               <span className="text-[15px] tabular-nums text-sub">
                 {formatDateJa(r.starts_on)} 〜 {formatDateJa(r.ends_on)}
