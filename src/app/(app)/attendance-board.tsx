@@ -1,7 +1,9 @@
 "use client";
 
 import { useOptimistic, useTransition } from "react";
-import { useToast, Toast } from "@/components/toast";
+// v2（ダーク面）用のトースト。v1 版は ink 塗りでダーク面にほぼ溶けて読めない。
+import { useToast, Toast } from "@/components/v2/toast";
+import { cardClass } from "@/components/v2/styles";
 import type {
   AttendanceStatus,
   AttendanceRow,
@@ -86,20 +88,22 @@ export function AttendanceBoard({
   return (
     <div className="flex flex-col gap-6">
       {rows.length > 0 && (
-        <div className="overflow-hidden rounded-lg border border-hairline bg-canvas">
+        // ⚠️ overflow-hidden を付けない（出席トグルの色グローが切れる）。
+        // 角丸に沿わせたい要素は入っていないので不要。
+        <div className={cardClass}>
           {rows.map((row, i) => (
             <div
               key={row.studentId}
-              className={`flex min-h-[64px] items-center justify-between gap-4 px-5 ${
-                i > 0 ? "border-t border-divider-soft" : ""
+              className={`flex min-h-[64px] items-center justify-between gap-4 px-4 py-2 md:px-5 ${
+                i > 0 ? "border-t border-line" : ""
               }`}
             >
               <div className="flex min-w-0 flex-col">
-                <span className="truncate text-[17px] font-semibold text-ink">
+                <span className="truncate text-[17px] font-bold text-fg">
                   {row.name}
                 </span>
                 {row.subLabel && (
-                  <span className="truncate text-[14px] text-ink-muted-48">
+                  <span className="truncate text-[14px] text-sub">
                     {row.subLabel}
                   </span>
                 )}
@@ -115,7 +119,8 @@ export function AttendanceBoard({
       )}
 
       {allRecorded && (
-        <div className="flex items-center justify-center gap-2 text-[15px] font-semibold text-primary">
+        // 役割色は「完了=緑」（DESIGN_v2 §2）。
+        <div className="flex items-center justify-center gap-2 text-[15px] font-bold text-done">
           <DoneIcon />
           {doneLabel}
         </div>

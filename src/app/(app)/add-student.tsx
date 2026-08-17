@@ -1,7 +1,8 @@
 "use client";
 
 import { useState } from "react";
-import { inputClass } from "@/components/ui/form";
+import { inputClass, labelClass } from "@/components/v2/form";
+import { cardClass } from "@/components/v2/styles";
 import type { AttendanceCandidate } from "@/lib/attendance";
 
 // イレギュラー対応: 別の日に来た生徒をその日の出席として追加する（他コマの生徒も対象）。
@@ -27,7 +28,7 @@ export function AddStudent({
       <button
         type="button"
         onClick={() => setOpen(true)}
-        className="flex h-11 items-center justify-center self-start rounded-pill border border-hairline bg-canvas px-6 text-[17px] font-semibold text-ink transition-transform active:scale-95"
+        className="flex min-h-[44px] items-center justify-center self-start rounded-16 border border-line px-6 text-[17px] font-bold text-fg transition active:scale-95"
       >
         {label}
       </button>
@@ -37,16 +38,14 @@ export function AddStudent({
   return (
     <div className="flex flex-col gap-4">
       <div className="flex items-center justify-between gap-4">
-        <span className="text-[14px] font-semibold text-ink">
-          本日の出席に追加
-        </span>
+        <span className={labelClass}>本日の出席に追加</span>
         <button
           type="button"
           onClick={() => {
             setOpen(false);
             setQuery("");
           }}
-          className="text-[17px] font-semibold text-ink-muted-48 transition-transform active:scale-95"
+          className="flex min-h-[44px] items-center text-[17px] font-bold text-sub transition active:scale-95"
         >
           閉じる
         </button>
@@ -62,7 +61,7 @@ export function AddStudent({
       />
 
       {filtered.length > 0 ? (
-        <div className="overflow-hidden rounded-lg border border-hairline bg-canvas">
+        <div className={cardClass}>
           {filtered.map((c, i) => (
             <button
               key={c.id}
@@ -72,27 +71,27 @@ export function AddStudent({
                 setOpen(false);
                 setQuery("");
               }}
-              className={`flex min-h-[64px] w-full items-center justify-between gap-4 px-5 text-left transition-colors hover:bg-canvas-parchment ${
-                i > 0 ? "border-t border-divider-soft" : ""
+              className={`flex min-h-[64px] w-full items-center justify-between gap-4 px-4 py-2 text-left transition hover:bg-white/[0.04] md:px-5 ${
+                i > 0 ? "border-t border-line" : ""
               }`}
             >
               <div className="flex min-w-0 flex-col">
-                <span className="truncate text-[17px] font-semibold text-ink">
+                <span className="truncate text-[17px] font-bold text-fg">
                   {c.name}
                 </span>
-                <span className="truncate text-[14px] text-ink-muted-48">
+                <span className="truncate text-[14px] text-sub">
                   {c.kana}
                   {c.className ? ` ・ ${c.className}` : ""}
                 </span>
               </div>
-              <span aria-hidden className="shrink-0 text-primary">
+              <span aria-hidden className="shrink-0 text-[19px] text-accent">
                 ＋
               </span>
             </button>
           ))}
         </div>
       ) : (
-        <p className="text-[17px] text-ink-muted-48">
+        <p className="text-[17px] text-sub">
           {candidates.length === 0
             ? "追加できる生徒がいません。"
             : "該当する生徒がいません。"}

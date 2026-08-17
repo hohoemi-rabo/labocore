@@ -8,6 +8,12 @@ import {
   formatDateWithWeekday,
   shiftMonth,
 } from "@/lib/format";
+import {
+  cardClass,
+  glassCardClass,
+  tricolorSmClass,
+  v2CanvasClass,
+} from "@/components/v2/styles";
 import { AttendanceBoard } from "../attendance-board";
 
 const MONTH_RE = /^\d{4}-\d{2}$/;
@@ -64,44 +70,45 @@ export default async function CalendarPage({
   const closeHref = `/calendar?month=${month}`;
 
   return (
-    <div className="flex flex-col gap-6">
-      <h1 className="text-[28px] font-semibold tracking-[-0.02em] text-ink md:text-[34px]">
-        カレンダー
-      </h1>
+    <div className={`${v2CanvasClass} flex flex-col gap-6`}>
+      <div className="flex items-center gap-3">
+        <h1 className="text-[23px] font-black tracking-[.02em]">カレンダー</h1>
+        <div className={`${tricolorSmClass} flex-none`} aria-hidden />
+      </div>
 
       {/* 月送り */}
       <div className="flex items-center justify-between">
         <Link
           href={`/calendar?month=${shiftMonth(month, -1)}`}
-          className="flex h-11 items-center rounded-pill px-4 text-[17px] font-semibold text-primary transition-transform active:scale-95"
+          className="flex min-h-[44px] items-center rounded-pill px-4 text-[17px] font-bold text-accent transition active:scale-95"
         >
           ‹ 前月
         </Link>
-        <span className="text-[17px] font-semibold text-ink tabular-nums">
+        <span className="text-[19px] font-black tabular-nums">
           {formatMonthJa(month)}
         </span>
         <Link
           href={`/calendar?month=${shiftMonth(month, 1)}`}
-          className="flex h-11 items-center rounded-pill px-4 text-[17px] font-semibold text-primary transition-transform active:scale-95"
+          className="flex min-h-[44px] items-center rounded-pill px-4 text-[17px] font-bold text-accent transition active:scale-95"
         >
           翌月 ›
         </Link>
       </div>
 
-      {/* 月グリッド */}
-      <div className="overflow-hidden rounded-lg border border-hairline bg-canvas">
-        <div className="grid grid-cols-7 border-b border-divider-soft">
+      {/* 月グリッド。⚠️ overflow-hidden は付けない（セルのグロー・縁が切れる） */}
+      <div className={`${cardClass} p-2`}>
+        <div className="grid grid-cols-7 border-b border-line pb-2">
           {WEEKDAY_LABELS.map((label) => (
             <div
               key={label}
-              className="py-2 text-center text-[13px] font-semibold text-ink-muted-48"
+              className="py-1 text-center text-[13px] font-bold text-sub"
             >
               {label}
             </div>
           ))}
         </div>
 
-        <div className="grid grid-cols-7">
+        <div className="grid grid-cols-7 pt-1">
           {cells.map((cell, i) => {
             if (!cell) {
               return <div key={`empty-${i}`} className="min-h-[56px]" />;
@@ -112,27 +119,36 @@ export default async function CalendarPage({
             const isToday = cell === today;
             const isSelected = cell === selectedDate;
 
+            // 日付の色分け（DESIGN_v2 §8・チケット25 で確定）:
+            //   記録あり = スカイの点 / 休講 = ローズの点 + 取り消し線
+            //   今日 = 数字がスカイの太字 / 選択中 = 淡い面 + スカイの縁
+            // 縁は**全セルが透明で持つ**（選択時だけ足すと 1px ずれる）。
             return (
               <Link
                 key={cell}
                 href={`/calendar?month=${month}&date=${cell}`}
-                className={`flex min-h-[56px] flex-col items-center gap-1 py-2 transition-colors active:scale-95 ${
-                  isSelected ? "bg-canvas-parchment" : ""
+                aria-current={isSelected ? "date" : undefined}
+                className={`flex min-h-[56px] flex-col items-center gap-1 rounded-12 border border-transparent py-2 transition active:scale-95 ${
+                  isSelected ? "border-accent-line bg-white/[0.06]" : ""
                 }`}
               >
                 <span
                   className={`text-[15px] tabular-nums ${
-                    isToday ? "font-semibold text-primary" : "text-ink"
-                  } ${isClosed ? "text-ink-muted-48 line-through" : ""}`}
+                    isClosed
+                      ? "text-sub line-through"
+                      : isToday
+                        ? "font-black text-accent"
+                        : "text-fg"
+                  }`}
                 >
                   {dayNum}
                 </span>
                 <span className="flex h-1.5 items-center gap-1">
                   {hasRecord && (
-                    <span className="h-1.5 w-1.5 rounded-pill bg-primary" />
+                    <span className="h-1.5 w-1.5 rounded-pill bg-accent" />
                   )}
                   {isClosed && (
-                    <span className="h-1.5 w-1.5 rounded-pill bg-ink-muted-48" />
+                    <span className="h-1.5 w-1.5 rounded-pill bg-off" />
                   )}
                 </span>
               </Link>
@@ -147,35 +163,38 @@ export default async function CalendarPage({
           <Link
             href={closeHref}
             aria-label="閉じる"
-            className="fixed inset-0 z-40 bg-ink/40"
+            className="fixed inset-0 z-40 bg-black/60"
           />
-          <div className="fixed inset-x-0 bottom-0 z-50 max-h-[85vh] overflow-y-auto rounded-t-lg bg-canvas md:inset-y-0 md:left-auto md:right-0 md:max-h-none md:w-[440px] md:rounded-none md:border-l md:border-hairline">
-            <div className="flex flex-col gap-6 p-5 md:p-6 md:pt-[68px]">
+          {/* パネルは不透明面（DESIGN_v2 §9: backdrop-blur はヘッダーと入口だけ）。
+              PC では全高に出るのでヘッダーを覆うが、オーバーレイのクリックか
+              「閉じる」で戻れるため導線は保たれる。 */}
+          <div className="fixed inset-x-0 bottom-0 z-50 max-h-[85vh] overflow-y-auto rounded-t-26 border border-line bg-card shadow-elev-3 md:inset-y-0 md:left-auto md:right-0 md:max-h-none md:w-[440px] md:rounded-none md:border-y-0 md:border-l">
+            <div className="flex flex-col gap-6 p-5 md:p-6 md:pt-8">
               <div className="flex items-center justify-between gap-4">
-                <h2 className="text-[21px] font-semibold text-ink">
+                <h2 className="text-[21px] font-black tabular-nums">
                   {formatDateWithWeekday(selectedDate)}
                 </h2>
                 <Link
                   href={closeHref}
-                  className="text-[17px] font-semibold text-ink-muted-48 transition-transform active:scale-95"
+                  className="flex min-h-[44px] items-center text-[17px] font-bold text-sub transition active:scale-95"
                 >
                   閉じる
                 </Link>
               </div>
 
               {day.closed ? (
-                <div className="flex min-h-[160px] flex-col items-center justify-center gap-2 rounded-lg bg-canvas-parchment px-6 py-10 text-center">
-                  <p className="text-[21px] font-semibold text-ink">休講日</p>
+                <div
+                  className={`${glassCardClass} flex min-h-[160px] flex-col items-center justify-center gap-2 px-6 py-10 text-center`}
+                >
+                  <p className="text-[21px] font-black text-off">休講日</p>
                   {day.closed.reason && (
-                    <p className="text-[17px] text-ink-muted-48">
-                      {day.closed.reason}
-                    </p>
+                    <p className="text-[17px] text-sub">{day.closed.reason}</p>
                   )}
                 </div>
               ) : (
                 <>
                   {!day.hasClass && day.rows.length === 0 && (
-                    <p className="text-[15px] text-ink-muted-48">
+                    <p className="text-[15px] text-sub">
                       この日はコマがありません。下のボタンから生徒を追加できます。
                     </p>
                   )}

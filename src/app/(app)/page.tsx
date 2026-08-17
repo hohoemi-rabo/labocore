@@ -1,9 +1,15 @@
 import { createClient } from "@/lib/supabase/server";
 import { todayJst, formatDateWithWeekday } from "@/lib/format";
 import { getDayAttendance } from "@/lib/attendance";
-import { LegacyPanel } from "@/components/legacy-panel";
+import {
+  glassCardClass,
+  tricolorSmClass,
+  v2CanvasClass,
+} from "@/components/v2/styles";
 import { AttendanceBoard } from "./attendance-board";
 
+// 今日の出欠（最重要画面）。25 で v2 デザインへ刷新。
+// データ取得と楽観的更新の作りはフェーズ1のまま変えていない。
 export default async function TodayPage() {
   const today = todayJst();
   const supabase = await createClient();
@@ -12,48 +18,51 @@ export default async function TodayPage() {
 
   const title = formatDateWithWeekday(today);
 
-  // 休講日はその旨のみ表示し、生徒リストは出さない（DESIGN §5.2）。
-  // LegacyPanel は 24 の移行期間だけの白面ラッパー。25 でこの画面を v2 化したら外す。
+  // 休講日はその旨のみ表示し、生徒リストは出さない（REQUIREMENTS §8）。
   if (closed) {
     return (
-      <LegacyPanel>
-        <div className="flex flex-col gap-6">
-          <h1 className="text-[28px] font-semibold tracking-[-0.02em] text-ink md:text-[34px]">
-            {title}
-          </h1>
-          <div className="flex min-h-[240px] flex-col items-center justify-center gap-2 rounded-lg bg-canvas-parchment px-6 py-12 text-center">
-            <p className="text-[28px] font-semibold text-ink">本日は休講日</p>
-            {closed.reason && (
-              <p className="text-[17px] text-ink-muted-48">{closed.reason}</p>
-            )}
-          </div>
+      <div className={v2CanvasClass}>
+        <PageTitle title={title} />
+        <div
+          className={`${glassCardClass} flex min-h-[240px] flex-col items-center justify-center gap-2 px-6 py-12 text-center`}
+        >
+          {/* 役割色「休み」= ローズ（DESIGN_v2 §2） */}
+          <p className="text-[26px] font-black text-off">本日は休講日</p>
+          {closed.reason && (
+            <p className="text-[17px] text-sub">{closed.reason}</p>
+          )}
         </div>
-      </LegacyPanel>
+      </div>
     );
   }
 
   return (
-    <LegacyPanel>
-      <div className="flex flex-col gap-6">
-        <div className="flex flex-col gap-1">
-          <h1 className="text-[28px] font-semibold tracking-[-0.02em] text-ink md:text-[34px]">
-            {title}
-          </h1>
-          {subtitle && (
-            <p className="text-[17px] text-ink-muted-48">{subtitle}</p>
-          )}
-        </div>
+    <div className={v2CanvasClass}>
+      <PageTitle title={title} subtitle={subtitle} />
 
-        {!hasClass && rows.length === 0 ? (
-          <p className="text-[17px] text-ink-muted-48">本日のコマはありません。</p>
-        ) : (
-          <AttendanceBoard
-            lessonDate={today}
-            initialRows={rows}
-            candidates={candidates}
-          />
-        )}
+      {!hasClass && rows.length === 0 ? (
+        <p className="text-[17px] text-sub">本日のコマはありません。</p>
+      ) : (
+        <AttendanceBoard
+          lessonDate={today}
+          initialRows={rows}
+          candidates={candidates}
+        />
+      )}
+    </div>
+  );
+}
+
+function PageTitle({ title, subtitle }: { title: string; subtitle?: string }) {
+  return (
+    <div className="mb-6 flex flex-col gap-1">
+      <div className="flex items-center gap-3">
+        <h1 className="text-[23px] font-black tracking-[.02em] tabular-nums">
+          {title}
+        </h1>
+        <div className={`${tricolorSmClass} flex-none`} aria-hidden />
       </div>
-    </LegacyPanel>
+      {subtitle && <p className="text-[17px] text-sub">{subtitle}</p>}
+    </div>
   );
 }
