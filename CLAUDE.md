@@ -14,7 +14,7 @@ LaboCore（ラボコア）— シニア向けパソコン・スマホ教室「�
 
 **フェーズ1（チケット 01〜12）は実装完了し、本番運用中**。URL は https://labocore.vercel.app（Vercel・GitHub 連携で `main` push により自動デプロイ）。8画面（今日の出欠 / カレンダー / 月次集計 / 生徒・コマ・休講日管理 / 生徒詳細 / ログイン）が稼働し、Supabase スリープ防止の keepalive cron も稼働中（下記）。
 
-**フェーズ2「授業記録」はチケット 13〜28 に分割済み。13〜22 が実装完了し（M1 = 生徒向け一式が本番稼働）、次は 23 から着手する。** 現状の詳細は下記「フェーズ2の現状」、横断的な確定事項は「フェーズ2の実装方針」を参照。
+**フェーズ2「授業記録」はチケット 13〜28 に分割済み。13〜23 が実装完了し（M1 = 生徒向け一式が本番稼働・M2 = AI 下書きと他クラスコピーも完了）、次は 24 = M3（既存管理画面の v2 刷新）から着手する。** 現状の詳細は下記「フェーズ2の現状」、横断的な確定事項は「フェーズ2の実装方針」を参照。
 
 **M1 の実装は完了し本番稼働中**（合言葉 → クラスえらび → クラスページ、PWA でホーム画面追加可）。実機確認（Safari / Chrome のホーム画面追加・絵文字・プロンプトのコピー）も済んでいる。
 
@@ -124,7 +124,7 @@ LaboCore（ラボコア）— シニア向けパソコン・スマホ教室「�
 - `src/app/(app)/attendance-board.tsx`（`useOptimistic`+`useTransition`+`useToast` の中心）/ `attendance-toggle.tsx`（出席｜欠席の2セグメント pill）/ `add-student.tsx`（別日来訪の追加）。`doneLabel`/`addLabel` で文言を差し替えて再利用する。
 - `src/app/(app)/summary/` — 月次集計。`setPayment` も同じ「redirect せず `{ error? }`・楽観的更新」パターン（`payments` を `onConflict: "student_id,target_month"` で upsert）。集計は `attendance_records` を月範囲取得し **JS 集約**（`unit_price_at_time` を合計＝スナップショット）。
 
-## フェーズ2の現状（13〜22 実装済み・23 から着手）
+## フェーズ2の現状（13〜23 実装済み・24 から着手）
 
 ### 追加済みの DB（14）
 
@@ -150,7 +150,7 @@ LaboCore（ラボコア）— シニア向けパソコン・スマホ教室「�
 | `src/lib/image-client.ts` | `shrinkImageInBrowser`（ブラウザ側の事前縮小） |
 | `src/lib/r2.ts` | `uploadImage` / `deleteImage` / `copyImage`（server-only） |
 | `src/lib/gemini.ts` | `generateRecordDraft` / `isGeminiConfigured` / `geminiModel` / `DEFAULT_GEMINI_MODEL` / `GeminiDraftError` / `SYSTEM_INSTRUCTION`（server-only・**モデル ID とプロンプトの単一の置き場**） |
-| `src/lib/format.ts` | 既存に加え `addDays` を追加 |
+| `src/lib/format.ts` | 既存に加え `addDays`（20）/ `nextWeekdayOnOrAfter`（23・コピー先クラスの曜日に日付を合わせる）を追加 |
 | `src/components/v2/styles.ts` | `v2CanvasClass` / `entryCanvasClass` / `kirokuCanvasClass` / `entryBoxClass` / `glassCardClass` / `cardClass` / `accentCardClass` / `eyebrowClass`(+News/Prompt) / `sectionTitleClass` / `tricolorClass`(+Sm) / `accentButtonClass` / `skyButtonClass` / `entryButtonClass` / `copyButtonClass`(+Done) / `datePillClass` |
 | `src/components/v2/form.ts` | `labelClass` / `inputClass` / `selectClass` / `textareaClass` / `entryInputClass` / `errorClass` / `errorBandClass` |
 | `src/components/v2/confirm-dialog.tsx`・`toast.tsx` | v2 版（v1 版はダーク面で読めない。**v2 画面では必ず v2 版を import する**） |
@@ -164,7 +164,7 @@ LaboCore（ラボコア）— シニア向けパソコン・スマホ教室「�
 管理側（16〜18・22）:
 
 - `/records` — 記録カード一覧（日付順フラット + クラス絞り込みタブ + 下書き↔公開のインライン切替）
-- `/records/new`・`/records/[id]/edit` — `RecordForm` + `PhotoPicker` + `AiDraftPanel`（22）
+- `/records/new`・`/records/[id]/edit` — `RecordForm` + `PhotoPicker` + `AiDraftPanel`（22）。編集画面には `CopyToClassDialog`（23）と削除の `ConfirmDialog`
 - `/records/next-lessons` — 全 active コマの「次回のじゅぎょう」をカード単位で編集
 - `/records/announcements`（+ `new`・`[id]/edit`）— 掲載中/掲載予定/期限切れの3セクション
 - ナビ（`src/components/nav/nav-items.ts`）に「記録」を追加済み
@@ -194,6 +194,15 @@ LaboCore（ラボコア）— シニア向けパソコン・スマホ教室「�
 - **`npm run verify:gemini` でブラウザなしに通しで確認できる。** モデルを差し替えたとき・「AI下書きが失敗する」ときはまずこれを叩く
 - 実測: `gemini-3.5-flash-lite` + 768px 画像1枚で約2秒・1,434 トークン（`/records` の `maxDuration = 60` に対して十分内側）
 
+### 23（他クラスへの複製）で確立済み・触るときに壊さないこと
+
+編集画面の「別のクラスに複製」→ クラスと日付を選ぶと `status='draft'` の新規カードを作り、コピー先の編集画面へ送る。
+
+- **⚠️ 同じルートの別パラメータへ遷移するときは `key` を付ける（23 で判明）。** `/records/A/edit` → `/records/B/edit` の移動で、App Router は**ページ内のクライアントコンポーネントを再マウントしない**（同じ型・同じ位置なので state も DOM の値も引き継がれる）。`key={record.id}` が無いと、複製先の画面にコピー元のテーマ・メモが残ったまま出る。**今後、同種の遷移を作るときは必ず思い出すこと**
+- **写真は URL を共有せず `copyImage` でオブジェクトごと複製する。** 共有すると元カードを削除したときに複製側の写真まで消える（`deleteUnreferenced` は他の行が参照していれば残す作りだが、そこに頼らない）
+- **重複（`UNIQUE(class_id, lesson_date)`）は写真を複製する前に見る。** 順番を逆にすると、数秒かけて複製してから「既にあります」と言うことになる。エラーは**ダイアログを閉じずに**出し、日付を直して再実行できるようにする
+- `v2/confirm-dialog.tsx` は入力欄を持てない（自前の `<form>` + Server Action 直結）ので、入力を伴う確認は別部品にする。前例が `copy-to-class-dialog.tsx`（22 の `ai-draft-panel.tsx` 内のダイアログと同じ理由）
+
 ### 19〜21（生徒向け一式）で確立済み・触るときに壊さないこと
 
 19〜21 で済んだこと: anon クライアントの共通化 / middleware の合言葉分岐 / `(kiroku)` layout と `force-dynamic` / クラスページ本体 / PWA 一式。
@@ -218,7 +227,7 @@ LaboCore（ラボコア）— シニア向けパソコン・スマホ教室「�
 
 機能要件は REQUIREMENTS_phase2.md、デザインは DESIGN_v2.md + `docs/design-sample.html`（見た目の正典）。以下はチケット分割時のヒアリングで確定した横断事項（詳細は各チケット）。
 
-- **マイルストーン**: M1=13〜21（生徒向け `/kiroku` 一式+管理入力。ここで先行お披露目）/ M2=22〜23（Gemini AI 下書き・他クラスコピー）/ M3=24〜28（既存管理画面の v2 刷新・v1 撤去）。13→14→15 は並行可
+- **マイルストーン**: M1=13〜21（生徒向け `/kiroku` 一式+管理入力。ここで先行お披露目）**完了** / M2=22〜23（Gemini AI 下書き・他クラスコピー）**完了** / M3=24〜28（既存管理画面の v2 刷新・v1 撤去）。13→14→15 は並行可
 - **サイト名**: 「ほほ笑みラボ 授業の記録」で確定。合言葉は「ほほえみ」= env `KIROKU_PASSWORD`（httpOnly Cookie・有効期限1年目安）。PWA アイコンは実装時にデザインシステム準拠で作成（後日差し替え可）
 - **ルーティング**: `(kiroku)` route group・全ページ noindex。`/kiroku`（合言葉）→ `/kiroku/select`（クラスえらび）→ `/kiroku/[classId]`（クラスページ）。middleware は `/kiroku` 配下を Supabase Auth 対象から外し**合言葉 Cookie で判定**する（`/api/keepalive` 除外を壊さないこと）。タブ切替では「自分のクラス」の記憶 Cookie を変更しない（選び直しはフッター導線）
 - **anon RLS**: `lesson_records` は published のみ / `announcements` は掲載期間内のみ（日付判定は `(now() AT TIME ZONE 'Asia/Tokyo')::date`。UTC の `current_date` を使わない）/ `classes` は is_active / `closed_days` は全行。**students・attendance_records・payments の anon 完全遮断は変更しない**

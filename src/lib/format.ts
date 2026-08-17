@@ -51,6 +51,13 @@ export const addDays = (date: string, days: number) => {
   ).padStart(2, "0")}`;
 };
 
+// `from` から見て weekday(0=日〜6=土) に当たる直近の日を返す（from 当日を含む）。
+// 記録カードを別クラスへ複製するとき、コピー先クラスの曜日に日付を合わせるのに使う
+// （木曜の記録を金曜クラスへ → 同じ週の金曜）。同曜日のクラス（水曜午前→水曜午後）なら
+// 差が 0 になり元と同じ日付を返す。これは意図した挙動。
+export const nextWeekdayOnOrAfter = (from: string, weekday: number) =>
+  addDays(from, (weekday - weekdayOf(from) + 7) % 7);
+
 // "2026-07-22" → "7月22日（水）"
 export const formatDateWithWeekday = (date: string) => {
   const [, m, d] = date.split("-").map(Number);

@@ -10,7 +10,7 @@ import {
   generateRecordDraft,
 } from "@/lib/gemini";
 import { processImage } from "@/lib/image";
-import { deleteImage, uploadImage } from "@/lib/r2";
+import { copyImage, deleteImage, uploadImage } from "@/lib/r2";
 import { MAX_PHOTOS } from "@/lib/records";
 import { revalidateRecords } from "@/lib/revalidate";
 
@@ -32,6 +32,7 @@ export type RecordFormState = {
 
 const SAVE_FAILED = "保存に失敗しました。時間をおいて再度お試しください。";
 const DUPLICATE = "このクラスのこの日付には既に記録があります";
+const DUPLICATE_COPY = "コピー先のその日付には既に記録があります";
 const TOO_MANY_PHOTOS = `写真は${MAX_PHOTOS}枚までです`;
 
 function parseForm(formData: FormData) {
@@ -260,6 +261,91 @@ export async function setRecordStatus(
   // 公開状態が変わると anon から見えるかどうかが変わるので、生徒向けも再検証する。
   revalidateRecords();
   return {};
+}
+
+// ── 他クラスへの複製（チケット23）───────────────────────────
+// 同じテーマを複数クラスでやる週の入力負荷を下げる（要件 §8.1）。
+// **公開状態はコピーしない**（必ず下書きで作り、人が手直ししてから公開する）。
+
+const copySchema = z.object({
+  id: z.string().uuid(),
+  class_id: z.string().uuid("コピー先のクラスを選んでください"),
+  lesson_date: z
+    .string()
+    .regex(/^\d{4}-\d{2}-\d{2}$/, "日付を入力してください"),
+});
+
+export async function copyRecordToClass(
+  input: z.input<typeof copySchema>,
+): Promise<{ error?: string }> {
+  const parsed = copySchema.safeParse(input);
+  if (!parsed.success) {
+    return { error: parsed.error.issues[0]?.message ?? "入力が不正です。" };
+  }
+
+  const supabase = await createClient();
+
+  const { data: source } = await supabase
+    .from("lesson_records")
+    .select("class_id, theme, memo, prompt, image_urls")
+    .eq("id", parsed.data.id)
+    .maybeSingle();
+  if (!source) {
+    return { error: "元の記録が見つかりませんでした。" };
+  }
+  // UI 側でも選べないようにしてあるが、サーバーでも確かめる。
+  if (source.class_id === parsed.data.class_id) {
+    return { error: "同じクラスへは複製できません。" };
+  }
+
+  // 重複は UNIQUE 制約でも弾けるが先に見る。
+  // そうしないと写真を複製し終えてから「既にあります」と言うことになる。
+  const { data: existing } = await supabase
+    .from("lesson_records")
+    .select("id")
+    .eq("class_id", parsed.data.class_id)
+    .eq("lesson_date", parsed.data.lesson_date)
+    .maybeSingle();
+  if (existing) {
+    return { error: DUPLICATE_COPY };
+  }
+
+  // 写真は URL を共有せず **R2 オブジェクトごと複製**する。
+  // 共有にすると、元カードを削除したときに複製側の写真まで消える。
+  const copied: string[] = [];
+  try {
+    for (const url of source.image_urls) {
+      copied.push(await copyImage(url));
+    }
+  } catch (error) {
+    console.error("[records] 写真の複製に失敗しました:", error);
+    await rollbackUploads(copied);
+    return { error: "写真の複製に失敗しました。もう一度お試しください。" };
+  }
+
+  const { data: created, error } = await supabase
+    .from("lesson_records")
+    .insert({
+      class_id: parsed.data.class_id,
+      lesson_date: parsed.data.lesson_date,
+      theme: source.theme,
+      memo: source.memo,
+      prompt: source.prompt,
+      image_urls: copied,
+      status: "draft",
+    })
+    .select("id")
+    .single();
+  if (error || !created) {
+    await rollbackUploads(copied);
+    if (error?.code === "23505") return { error: DUPLICATE_COPY };
+    if (error?.code === "23514") return { error: TOO_MANY_PHOTOS };
+    return { error: SAVE_FAILED };
+  }
+
+  // redirect は NEXT_REDIRECT を throw するので try/catch の外で呼ぶ。
+  revalidateRecords();
+  redirect(`/records/${created.id}/edit?copied=1`);
 }
 
 // ── AI 下書き（チケット22）─────────────────────────────────
