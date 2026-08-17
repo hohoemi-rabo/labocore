@@ -1,5 +1,9 @@
 import Link from "next/link";
 import { createClient } from "@/lib/supabase/server";
+import {
+  tricolorSmClass,
+  v2CanvasClass,
+} from "@/components/v2/styles";
 import { ClassForm } from "../class-form";
 import { createClass } from "../actions";
 
@@ -16,14 +20,15 @@ export default async function NewClassPage() {
   );
 
   return (
-    <div className="flex max-w-[520px] flex-col gap-6">
-      <Link href="/settings/classes" className="text-[14px] text-ink-muted-48">
+    <div className={`${v2CanvasClass} flex max-w-[520px] flex-col gap-6`}>
+      <Link href="/settings/classes" className="text-[15px] text-sub">
         ‹ コマ管理
       </Link>
 
-      <h1 className="text-[28px] font-semibold tracking-[-0.02em] text-ink md:text-[34px]">
-        コマを追加
-      </h1>
+      <div className="flex items-center gap-3">
+        <h1 className="text-[23px] font-black tracking-[.02em]">コマを追加</h1>
+        <div className={`${tricolorSmClass} flex-none`} aria-hidden />
+      </div>
 
       <ClassForm
         action={createClass}

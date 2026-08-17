@@ -1,9 +1,11 @@
 import Link from "next/link";
 import { createClient } from "@/lib/supabase/server";
 import {
-  StudentSearchList,
-  type StudentRow,
-} from "./student-search-list";
+  skyButtonClass,
+  tricolorSmClass,
+  v2CanvasClass,
+} from "@/components/v2/styles";
+import { StudentSearchList, type StudentRow } from "./student-search-list";
 
 export default async function StudentsPage() {
   const supabase = await createClient();
@@ -25,18 +27,19 @@ export default async function StudentsPage() {
   }));
 
   return (
-    <div className="flex flex-col gap-6">
-      <Link href="/settings" className="text-[14px] text-ink-muted-48">
+    <div className={`${v2CanvasClass} flex flex-col gap-6`}>
+      <Link href="/settings" className="text-[15px] text-sub">
         ‹ 設定
       </Link>
 
       <div className="flex items-center justify-between gap-4">
-        <h1 className="text-[28px] font-semibold tracking-[-0.02em] text-ink md:text-[34px]">
-          生徒管理
-        </h1>
+        <div className="flex items-center gap-3">
+          <h1 className="text-[23px] font-black tracking-[.02em]">生徒管理</h1>
+          <div className={`${tricolorSmClass} flex-none`} aria-hidden />
+        </div>
         <Link
           href="/settings/students/new"
-          className="flex h-11 shrink-0 items-center justify-center rounded-pill bg-primary px-6 text-[17px] font-semibold text-on-dark transition-transform active:scale-95"
+          className={`${skyButtonClass} shrink-0`}
         >
           生徒を追加
         </Link>

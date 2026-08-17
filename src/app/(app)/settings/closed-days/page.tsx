@@ -1,7 +1,12 @@
 import Link from "next/link";
 import { createClient } from "@/lib/supabase/server";
 import { formatDateJa, todayJst } from "@/lib/format";
-import { ConfirmDialog } from "@/components/confirm-dialog";
+import { ConfirmDialog } from "@/components/v2/confirm-dialog";
+import {
+  cardClass,
+  tricolorSmClass,
+  v2CanvasClass,
+} from "@/components/v2/styles";
 import { ClosedDayForm } from "./closed-day-form";
 import { deleteClosedDay } from "./actions";
 
@@ -15,40 +20,42 @@ export default async function ClosedDaysPage() {
   const today = todayJst();
 
   return (
-    <div className="flex flex-col gap-6">
-      <Link href="/settings" className="text-[14px] text-ink-muted-48">
+    <div className={`${v2CanvasClass} flex flex-col gap-6`}>
+      <Link href="/settings" className="text-[15px] text-sub">
         ‹ 設定
       </Link>
 
-      <h1 className="text-[28px] font-semibold tracking-[-0.02em] text-ink md:text-[34px]">
-        休講日管理
-      </h1>
+      <div className="flex items-center gap-3">
+        <h1 className="text-[23px] font-black tracking-[.02em]">休講日管理</h1>
+        <div className={`${tricolorSmClass} flex-none`} aria-hidden />
+      </div>
 
-      <div className="rounded-lg border border-hairline bg-canvas p-5">
+      <div className={`${cardClass} p-5`}>
         <ClosedDayForm />
       </div>
 
       {closedDays && closedDays.length > 0 ? (
-        <div className="overflow-hidden rounded-lg border border-hairline bg-canvas">
+        <div className={cardClass}>
           {closedDays.map((c, i) => {
             const isPast = c.closed_date < today;
             return (
               <div
                 key={c.id}
-                className={`flex min-h-[64px] items-center justify-between gap-4 px-5 ${
-                  i > 0 ? "border-t border-divider-soft" : ""
+                className={`flex min-h-[64px] items-center justify-between gap-4 px-4 py-2 md:px-5 ${
+                  i > 0 ? "border-t border-line" : ""
                 }`}
               >
-                <div className="flex flex-col">
+                <div className="flex min-w-0 flex-col">
+                  {/* 過ぎた休講日は sub 色まで落として、これからの予定を目立たせる */}
                   <span
-                    className={`text-[17px] font-semibold tabular-nums ${
-                      isPast ? "text-ink-muted-48" : "text-ink"
+                    className={`text-[17px] font-bold tabular-nums ${
+                      isPast ? "text-sub" : "text-fg"
                     }`}
                   >
                     {formatDateJa(c.closed_date)}
                   </span>
                   {c.reason && (
-                    <span className="text-[14px] text-ink-muted-48">
+                    <span className="truncate text-[14px] text-sub">
                       {c.reason}
                     </span>
                   )}
@@ -66,7 +73,7 @@ export default async function ClosedDaysPage() {
           })}
         </div>
       ) : (
-        <p className="text-[17px] text-ink-muted-48">
+        <p className="rounded-20 border border-dashed border-line px-4 py-10 text-center text-[17px] text-sub">
           まだ休講日が登録されていません。上のフォームから登録してください。
         </p>
       )}

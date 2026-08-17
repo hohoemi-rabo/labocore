@@ -3,6 +3,12 @@ import { notFound } from "next/navigation";
 import { createClient } from "@/lib/supabase/server";
 import { Yen } from "@/components/yen";
 import {
+  cardClass,
+  sectionTitleClass,
+  tricolorSmClass,
+  v2CanvasClass,
+} from "@/components/v2/styles";
+import {
   WEEKDAY_LABELS,
   formatTimeRange,
   formatMonthJa,
@@ -14,8 +20,6 @@ const SMARTPHONE_OS_LABELS: Record<string, string> = {
   iphone: "iPhone",
 };
 
-const sectionTitleClass = "text-[21px] font-semibold text-ink";
-
 function InfoRow({
   label,
   value,
@@ -26,21 +30,18 @@ function InfoRow({
   const isEmpty =
     value === null || value === undefined || value === "" || value === false;
   return (
-    <div className="flex min-h-[52px] items-center justify-between gap-4 border-t border-divider-soft px-5 first:border-t-0">
-      <span className="shrink-0 text-[14px] text-ink-muted-48">{label}</span>
-      <span className="text-right text-[17px] text-ink">
+    <div className="flex min-h-[52px] items-center justify-between gap-4 border-t border-line px-5 first:border-t-0">
+      <span className="shrink-0 text-[14px] text-sub">{label}</span>
+      <span className="text-right text-[17px] text-fg-body">
         {isEmpty ? "—" : value}
       </span>
     </div>
   );
 }
 
+// ⚠️ overflow-hidden は付けない（v2 では影が切れる）。角丸に沿わせたい中身も無い。
 function Card({ children }: { children: React.ReactNode }) {
-  return (
-    <div className="overflow-hidden rounded-lg border border-hairline bg-canvas">
-      {children}
-    </div>
-  );
+  return <div className={cardClass}>{children}</div>;
 }
 
 type MonthAgg = {
@@ -110,23 +111,23 @@ export default async function StudentDetailPage({
     : null;
 
   return (
-    <div className="flex flex-col gap-8">
+    <div className={`${v2CanvasClass} flex flex-col gap-8`}>
       <div className="flex flex-col gap-4">
-        <Link
-          href="/settings/students"
-          className="text-[14px] text-ink-muted-48"
-        >
+        <Link href="/settings/students" className="text-[15px] text-sub">
           ‹ 生徒管理
         </Link>
         <div className="flex items-center justify-between gap-4">
-          <h1 className="text-[28px] font-semibold tracking-[-0.02em] text-ink md:text-[34px]">
-            {student.name}
-          </h1>
+          <div className="flex min-w-0 items-center gap-3">
+            <h1 className="truncate text-[23px] font-black tracking-[.02em]">
+              {student.name}
+            </h1>
+            <div className={`${tricolorSmClass} flex-none`} aria-hidden />
+          </div>
           <Link
             href={`/settings/students/${student.id}/edit`}
-            className="shrink-0 text-[17px] font-semibold text-primary transition-transform active:scale-95"
+            className="flex min-h-[44px] shrink-0 items-center text-[15px] font-bold text-accent transition active:scale-95"
           >
-            編集
+            編集 ›
           </Link>
         </div>
       </div>
@@ -143,7 +144,7 @@ export default async function StudentDetailPage({
             value={
               <span>
                 <Yen amount={student.unit_price} />
-                <span className="text-ink-muted-48"> / 回</span>
+                <span className="text-sub"> / 回</span>
               </span>
             }
           />
@@ -187,12 +188,8 @@ export default async function StudentDetailPage({
         <h2 className={sectionTitleClass}>メモ</h2>
         <Card>
           <div className="min-h-[52px] px-5 py-4">
-            <p className="whitespace-pre-wrap text-[17px] text-ink">
-              {student.note ? (
-                student.note
-              ) : (
-                <span className="text-ink-muted-48">—</span>
-              )}
+            <p className="whitespace-pre-wrap text-[17px] leading-jp text-fg-body">
+              {student.note ? student.note : <span className="text-sub">—</span>}
             </p>
           </div>
         </Card>
@@ -207,26 +204,26 @@ export default async function StudentDetailPage({
               <div
                 key={h.month}
                 className={`flex flex-col gap-1 px-5 py-4 ${
-                  i > 0 ? "border-t border-divider-soft" : ""
+                  i > 0 ? "border-t border-line" : ""
                 }`}
               >
                 <div className="flex items-center justify-between gap-4">
-                  <span className="text-[17px] font-semibold text-ink">
+                  <span className="text-[17px] font-bold text-fg">
                     {formatMonthJa(h.month)}
                   </span>
                   <Yen
                     amount={h.amount}
-                    className="text-[17px] font-semibold text-ink"
+                    className="text-[17px] font-bold text-fg"
                   />
                 </div>
-                <span className="text-[14px] text-ink-muted-48 tabular-nums">
+                <span className="text-[14px] text-sub tabular-nums">
                   出席 {h.present}回 ・ 欠席 {h.absent}回
                 </span>
               </div>
             ))}
           </Card>
         ) : (
-          <p className="text-[17px] text-ink-muted-48">
+          <p className="rounded-20 border border-dashed border-line px-4 py-10 text-center text-[17px] text-sub">
             まだ出欠の記録がありません。
           </p>
         )}

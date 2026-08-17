@@ -1,9 +1,16 @@
 "use client";
 
-import { useActionState } from "react";
+import { startTransition, useActionState, useRef } from "react";
 import { WEEKDAY_LABELS } from "@/lib/format";
 import { CLASS_THEME_COLORS, accentStyle } from "@/lib/accent";
-import { labelClass, inputClass, errorClass } from "@/components/ui/form";
+import {
+  labelClass,
+  inputClass,
+  selectClass,
+  errorClass,
+  errorBandClass,
+} from "@/components/v2/form";
+import { skyButtonClass } from "@/components/v2/styles";
 import type { ClassFormState } from "./actions";
 
 type Action = (
@@ -36,6 +43,7 @@ export function ClassForm({
   usedColors?: Record<string, string>;
 }) {
   const [state, formAction, pending] = useActionState(action, {});
+  const formRef = useRef<HTMLFormElement>(null);
 
   // DB 値が大文字で入っていてもパレットと突き合わせられるように揃える。
   // 揃えないと defaultChecked がどれにも当たらず、ラジオが未選択のまま送信されてしまう。
@@ -49,8 +57,19 @@ export function ClassForm({
     CLASS_THEME_COLORS.find((c) => !usedColors[c.value])?.value ??
     CLASS_THEME_COLORS[0].value;
 
+  // action={formAction} は使わない（React 19 が返却時に非制御フィールドをリセットするため）。
+  // 送信ボタンは type="submit" のままにして onSubmit で止め、手動 dispatch する。
   return (
-    <form action={formAction} className="flex flex-col gap-5">
+    <form
+      ref={formRef}
+      onSubmit={(e) => {
+        e.preventDefault();
+        const form = formRef.current;
+        if (!form) return;
+        startTransition(() => formAction(new FormData(form)));
+      }}
+      className="flex flex-col gap-5"
+    >
       {defaultValues?.id && (
         <input type="hidden" name="id" value={defaultValues.id} />
       )}
@@ -81,7 +100,7 @@ export function ClassForm({
           id="weekday"
           name="weekday"
           defaultValue={defaultValues?.weekday ?? 3}
-          className={`${inputClass} pr-4`}
+          className={selectClass}
         >
           {WEEKDAY_LABELS.map((label, i) => (
             <option key={i} value={i}>
@@ -105,7 +124,7 @@ export function ClassForm({
             type="time"
             required
             defaultValue={defaultValues?.start_time}
-            className={inputClass}
+            className={`${inputClass} tabular-nums`}
           />
           {state.fieldErrors?.start_time && (
             <p className={errorClass}>{state.fieldErrors.start_time}</p>
@@ -122,7 +141,7 @@ export function ClassForm({
             type="time"
             required
             defaultValue={defaultValues?.end_time}
-            className={inputClass}
+            className={`${inputClass} tabular-nums`}
           />
           {state.fieldErrors?.end_time && (
             <p className={errorClass}>{state.fieldErrors.end_time}</p>
@@ -132,7 +151,7 @@ export function ClassForm({
 
       <fieldset className="flex flex-col gap-2">
         <legend className={labelClass}>テーマカラー</legend>
-        <p className="text-[14px] text-ink-muted-48">
+        <p className="text-[14px] text-sub">
           生徒向けページで、このクラスの差し色になります。
         </p>
         <div className="flex flex-wrap gap-3">
@@ -140,7 +159,7 @@ export function ClassForm({
             return (
               <label
                 key={c.value}
-                className="flex min-h-[44px] cursor-pointer items-center gap-2 rounded-pill border border-hairline px-4 has-[:checked]:border-primary has-[:checked]:bg-canvas-parchment"
+                className="flex min-h-[44px] cursor-pointer items-center gap-2 rounded-pill border border-line px-4 transition has-[:checked]:border-accent has-[:checked]:bg-white/[0.06]"
               >
                 <input
                   type="radio"
@@ -156,11 +175,11 @@ export function ClassForm({
                   style={accentStyle(c.value)}
                   className="h-5 w-5 rounded-pill bg-accent"
                 />
-                <span className="text-[14px] text-ink">{c.label}</span>
+                <span className="text-[14px] text-fg">{c.label}</span>
                 {/* 選択状態を色だけで表さない（色覚・モノクロ表示への配慮） */}
                 <span
                   aria-hidden
-                  className="hidden text-[14px] font-semibold text-primary peer-checked:inline"
+                  className="hidden text-[14px] font-bold text-accent peer-checked:inline"
                 >
                   ✓
                 </span>
@@ -170,7 +189,7 @@ export function ClassForm({
         </div>
         {/* 6色より多くコマが増えることもあるので、重複は禁止せず注意だけ出す */}
         {usedColors[defaultColor] && (
-          <p className="text-[14px] text-ink-muted-48">
+          <p className="text-[14px] text-sub">
             選択中の色は「{usedColors[defaultColor]}」でも使われています。
           </p>
         )}
@@ -179,12 +198,12 @@ export function ClassForm({
         )}
       </fieldset>
 
-      {state.formError && <p className={errorClass}>{state.formError}</p>}
+      {state.formError && <p className={errorBandClass}>{state.formError}</p>}
 
       <button
         type="submit"
         disabled={pending}
-        className="mt-2 flex h-11 items-center justify-center self-start rounded-pill bg-primary px-8 text-[17px] font-semibold text-on-dark transition-transform active:scale-95 disabled:opacity-60"
+        className={`${skyButtonClass} mt-2 self-start disabled:opacity-60`}
       >
         {pending ? "保存中…" : submitLabel}
       </button>

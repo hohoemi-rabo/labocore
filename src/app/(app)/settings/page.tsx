@@ -1,5 +1,10 @@
 import Link from "next/link";
 import { signOut } from "@/lib/auth/actions";
+import {
+  cardClass,
+  tricolorSmClass,
+  v2CanvasClass,
+} from "@/components/v2/styles";
 
 const links = [
   { href: "/settings/students", label: "生徒管理" },
@@ -9,32 +14,34 @@ const links = [
 
 export default function SettingsPage() {
   return (
-    <div className="flex flex-col gap-8">
-      <h1 className="text-[28px] font-semibold tracking-[-0.02em] text-ink md:text-[34px]">
-        設定
-      </h1>
+    <div className={`${v2CanvasClass} flex flex-col gap-8`}>
+      <div className="flex items-center gap-3">
+        <h1 className="text-[23px] font-black tracking-[.02em]">設定</h1>
+        <div className={`${tricolorSmClass} flex-none`} aria-hidden />
+      </div>
 
-      <div className="overflow-hidden rounded-lg border border-hairline bg-canvas">
+      <div className={cardClass}>
         {links.map((link, i) => (
           <Link
             key={link.href}
             href={link.href}
-            className={`flex min-h-[56px] items-center justify-between px-5 text-[17px] text-ink transition-colors hover:bg-canvas-parchment ${
-              i > 0 ? "border-t border-divider-soft" : ""
+            className={`flex min-h-[56px] items-center justify-between px-5 text-[17px] font-bold text-fg transition hover:bg-white/[0.04] ${
+              i > 0 ? "border-t border-line" : ""
             }`}
           >
             <span>{link.label}</span>
-            <span aria-hidden className="text-ink-muted-48">
+            <span aria-hidden className="text-sub">
               ›
             </span>
           </Link>
         ))}
       </div>
 
+      {/* ログアウトは自前の <form> なので、他のフォームの外に置く */}
       <form action={signOut}>
         <button
           type="submit"
-          className="flex h-11 items-center justify-center rounded-pill border border-hairline bg-canvas px-6 text-[17px] font-semibold text-ink transition-transform active:scale-95"
+          className="flex min-h-[44px] items-center justify-center rounded-16 border border-line px-6 text-[17px] font-bold text-fg transition active:scale-95"
         >
           ログアウト
         </button>

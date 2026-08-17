@@ -8,13 +8,13 @@ LaboCore（ラボコア）— シニア向けパソコン・スマホ教室「�
 
 - **REQUIREMENTS.md** — フェーズ1の機能要件・データモデル・画面構成の正典
 - **REQUIREMENTS_phase2.md** — フェーズ2「授業記録（じゅぎょうのきろく）」の機能要件の正典。フェーズ2実装前に必ず参照する
-- **DESIGN.md** — フェーズ1デザインシステム（v1）。**M3 完了まで未刷新のフェーズ1画面を保守するときのみ**参照する
+- **DESIGN.md** — フェーズ1デザインシステム（v1）。**27 で適用画面が無くなった**（撤去は 28）。歴史的経緯を追うとき以外は参照しない
 - **DESIGN_v2.md** — フェーズ2以降のデザイン正典（ダーク基調・クラスカラー）。見た目の正典は `docs/design-sample.html`。フェーズ2の新規画面・刷新画面はすべてこちらに従う
 - **SPEC.md** — 実装済み仕様書（as-built）。DB スキーマ・RLS・画面・Server Action・共通基盤の現状を一次情報と突き合わせて記述。**§4 の DB はフェーズ2分（`lesson_records` / `announcements` / `classes` の追加列 / anon ポリシー）まで同期済み**。設計時にまず参照する
 
 **フェーズ1（チケット 01〜12）は実装完了し、本番運用中**。URL は https://labocore.vercel.app（Vercel・GitHub 連携で `main` push により自動デプロイ）。8画面（今日の出欠 / カレンダー / 月次集計 / 生徒・コマ・休講日管理 / 生徒詳細 / ログイン）が稼働し、Supabase スリープ防止の keepalive cron も稼働中（下記）。
 
-**フェーズ2「授業記録」はチケット 13〜28 に分割済み。13〜26 が実装完了し（M1 = 生徒向け一式が本番稼働 / M2 = AI 下書き・他クラスコピー / M3 は 24 シェル・ログイン、25 今日の出欠・カレンダー、26 月次集計まで）、次は 27（設定一式の刷新）から着手する。** 現状の詳細は下記「フェーズ2の現状」、横断的な確定事項は「フェーズ2の実装方針」を参照。
+**フェーズ2「授業記録」はチケット 13〜28 に分割済み。13〜27 が実装完了し、管理画面は全画面 v2 になった（M1 = 生徒向け一式 / M2 = AI 下書き・他クラスコピー / M3 の刷新は 24〜27 で完了）。残るは 28（v1 の撤去とドキュメント同期）のみ。** 現状の詳細は下記「フェーズ2の現状」、横断的な確定事項は「フェーズ2の実装方針」を参照。
 
 **M1 の実装は完了し本番稼働中**（合言葉 → クラスえらび → クラスページ、PWA でホーム画面追加可）。実機確認（Safari / Chrome のホーム画面追加・絵文字・プロンプトのコピー）も済んでいる。
 
@@ -103,9 +103,8 @@ LaboCore（ラボコア）— シニア向けパソコン・スマホ教室「�
 
 - Server Action は Zod `safeParse` → 失敗時 `issue.path[0]` でフィールド別に集約して early return（`{ fieldErrors, formError }`）。成功時 `revalidatePath` → `redirect`。
 - 任意テキストは保存前に空文字→null 化（`nullIfEmpty`）。
-- 削除は論理削除（`is_active=false`）＋ 確認ダイアログ必須。v1 画面は `src/components/confirm-dialog.tsx`、**v2 画面は `src/components/v2/confirm-dialog.tsx`**。
-- **⚠️ フォームの送信方法は v1 画面と v2 画面で異なる**。v1 画面（未刷新のフェーズ1画面）は `<form action={formAction}>` + `useActionState(action, {})` の非制御入力。**v2 画面は手動 dispatch**（下記「フェーズ2の実装方針」）。
-  - v1 画面にも React 19 の「action が返ると非制御フィールドがリセットされる」問題は潜在的にあるが、`required` がほとんどを弾きサーバー側エラーが稀なので表面化していない。**チケット27 で v2 と同じ手動 dispatch に寄せる予定**（27 の Todo に記載済み）。
+- 削除は論理削除（`is_active=false`）＋ 確認ダイアログ必須。確認ダイアログは `src/components/v2/confirm-dialog.tsx`（v1 版は 27 で使われなくなった。削除は 28）。
+- **フォームの送信は全画面で手動 dispatch**（27 で統一済み）。`<form action={formAction}>` は使わない（下記「フェーズ2の実装方針」）。
 
 ### 共有ユーティリティ / コンポーネント
 
@@ -124,7 +123,7 @@ LaboCore（ラボコア）— シニア向けパソコン・スマホ教室「�
 - `src/app/(app)/attendance-board.tsx`（`useOptimistic`+`useTransition`+`useToast` の中心）/ `attendance-toggle.tsx`（出席｜欠席の2セグメント pill）/ `add-student.tsx`（別日来訪の追加）。`doneLabel`/`addLabel` で文言を差し替えて再利用する。
 - `src/app/(app)/summary/` — 月次集計。`setPayment` も同じ「redirect せず `{ error? }`・楽観的更新」パターン（`payments` を `onConflict: "student_id,target_month"` で upsert）。集計は `attendance_records` を月範囲取得し **JS 集約**（`unit_price_at_time` を合計＝スナップショット）。
 
-## フェーズ2の現状（13〜26 実装済み・27 から着手）
+## フェーズ2の現状（13〜27 実装済み・28 から着手）
 
 ### 追加済みの DB（14）
 
@@ -168,12 +167,14 @@ LaboCore（ラボコア）— シニア向けパソコン・スマホ教室「�
 - `(app)/layout.tsx` — `appShellClass`（ダーク面 + アンビエント）+ `AppHeader`（sticky ガラス・PC はタブ入り）+ `BottomTabs`（モバイル）。**PC の左サイドバーと純黒トップバーは廃止**
 - `(auth)/login` — 入口ボックス文法（トリコロール → LABOCORE → 教室運営システム）。フォームは手動 dispatch
 
-刷新済みのフェーズ1画面（25・26）:
+刷新済みのフェーズ1画面（25〜27・これで管理画面は全面 v2）:
 
 - `/`（今日の出欠）・`/calendar`（25）— 出欠まわりの共通部品（`attendance-board` / `attendance-toggle` / `add-student`）ごと v2 化
 - `/summary`（26）— ヒーローを `heroCardClass`（アクセントの radial グロー + 影「大」）に。`<Yen>` の「¥」は白面・ダーク面の両対応のため `opacity-60` に変更
-- いずれも**データ取得・集計・楽観的更新の作りは無変更**（見た目だけ）
-- **`LegacyPanel`（暫定白面）が残っているのは `/settings` 配下だけ**（27 で外す）
+- `/settings` 配下8ページ（27）— ハブ・コマ・生徒・生徒詳細・休講日。3つのフォームを手動 dispatch に移行
+- いずれも**データ取得・集計・楽観的更新・CRUD の作りは無変更**（見た目と送信方式だけ）
+- **`LegacyPanel` の利用箇所はゼロになった**。以下は 28 で削除する未使用ファイル:
+  `src/components/legacy-panel.tsx` / `src/components/confirm-dialog.tsx` / `src/components/toast.tsx` / `src/components/ui/form.ts`
 
 管理側（16〜18・22）:
 
@@ -221,8 +222,7 @@ LaboCore（ラボコア）— シニア向けパソコン・スマホ教室「�
 
 - **ダークの地色・アンビエントはシェル（`appShellClass`）だけが持つ。** ページ側の `v2CanvasClass` はタイポグラフィだけになった。ページで `bg-ground` を敷き直さない（二重になる）
 - **⚠️ シェルのツリーに `overflow-*` / `transform` / `filter` を足さない。** 祖先に付くとヘッダーの `position: sticky` が**エラーも警告も無く**効かなくなる（生徒向けヘッダーと同じ落とし穴）
-- **`LegacyPanel` は移行期間だけの足場。** 未刷新のフェーズ1画面を白面で包んで読めるようにしている。**25 で今日とカレンダー、26 で集計を外し済み**（`calendar/layout.tsx` / `summary/layout.tsx` は削除）。残りは 27 で `settings/layout.tsx` を**ファイルごと削除**する。28 で `grep -r LegacyPanel src/` がゼロになることを確認する
-  - パディングを刷新前の共通シェルと同じ `px-4 py-6 md:px-8` にしてあるのは集計ヒーローのフルブリードに合わせるためだったが、**26 でそのヒーローがカードになったのでこの制約は解けた**（設定配下にフルブリード要素は無い）
+- **`LegacyPanel` は移行期間だけの足場だった。25〜27 ですべて外れ、利用箇所はゼロ**（`calendar` / `summary` / `settings` の暫定 `layout.tsx` は削除済み）。**28 で `src/components/legacy-panel.tsx` をファイルごと削除**し、`grep -r LegacyPanel src/` がゼロになることを確認する
 - **管理画面のアクセントはスカイ固定**（`bg-sky-fill` / `shadow-glow-sky`）。`--accent` を使うのはクラス文脈がある場所だけ（記録一覧のクラスタブなど）
 - v1 の `confirm-dialog.tsx` / `toast.tsx` / `ui/form.ts` は**まだ使われている**（`LegacyPanel` の中の画面が使う）。撤去は 28
 
@@ -255,8 +255,10 @@ LaboCore（ラボコア）— シニア向けパソコン・スマホ教室「�
 - **ルーティング**: `(kiroku)` route group・全ページ noindex。`/kiroku`（合言葉）→ `/kiroku/select`（クラスえらび）→ `/kiroku/[classId]`（クラスページ）。middleware は `/kiroku` 配下を Supabase Auth 対象から外し**合言葉 Cookie で判定**する（`/api/keepalive` 除外を壊さないこと）。タブ切替では「自分のクラス」の記憶 Cookie を変更しない（選び直しはフッター導線）
 - **anon RLS**: `lesson_records` は published のみ / `announcements` は掲載期間内のみ（日付判定は `(now() AT TIME ZONE 'Asia/Tokyo')::date`。UTC の `current_date` を使わない）/ `classes` は is_active / `closed_days` は全行。**students・attendance_records・payments の anon 完全遮断は変更しない**
 - **管理側**: ナビに「記録」を追加し `/records` 配下に集約（記録カード CRUD・`next-lessons`・`announcements`）。**新設管理画面（16〜18）は最初から v2 デザインで実装する**（v1 シェルとの混在は画面単位として許容。ページ側でフルブリードのダーク面 `v2CanvasClass` を敷く）
-- **v2 画面のフォーム（16 で確立）**: `<form action={formAction}>` を**使わない**。React 19 は action が throw せずに返ると**非制御フィールドを自動リセット**するため、`{fieldErrors}` を返すと入力が全部消える。`startTransition(() => formAction(fd))` の手動 dispatch にする（送信ボタンは `type="button"` + `form.reportValidity()`）。前例は `src/app/(app)/records/record-form.tsx`
-  - **⚠️ 入力欄が1つだけのフォームは `onSubmit` で `preventDefault` する（19 で判明）**。1つだと Enter で HTML の暗黙送信が起きるが、このパターンには `action` も submit ボタンも無いのでブラウザが素の GET を投げ、ページがリロードされてエラー表示が消える。欄が2つ以上あると暗黙送信が抑止されるため既存画面では発現していない。前例は `src/app/(kiroku)/kiroku/gate-form.tsx`
+- **フォームは `<form action={formAction}>` を使わない（16 で確立・27 で全画面に適用）**。React 19 は action が throw せずに返ると**非制御フィールドを自動リセット**するため、`{fieldErrors}` を返すと入力が全部消える。`startTransition(() => formAction(fd))` の手動 dispatch にする。形は2つ:
+  - **送信ボタンが1つ = 「ログインフォーム型」（推奨）**: ボタンは `type="submit"` のまま、`<form onSubmit>` で `preventDefault` してから手動 dispatch する。`required` のネイティブ検証と Enter 送信がそのまま効き、`reportValidity()` を書かなくて済む。**入力欄が1つのフォームでも安全**（`onSubmit` を必ず捕まえるので、暗黙送信で素の GET が飛ぶ事故が起きない）。前例は `src/app/(auth)/login/login-form.tsx`・設定の各フォーム・`src/app/(kiroku)/kiroku/gate-form.tsx`
+  - **送信ボタンが複数**: submit ボタンにできないので `type="button"` + `form.reportValidity()` + 手動 dispatch。前例は `src/app/(app)/records/record-form.tsx`（下書き保存／公開する の2つ）
+  - ⚠️ どちらの形でも `action` 属性は付けない。付けると React 19 のリセットが復活する
   - **入力欄が無く action が必ず `redirect()` するフォームは、素の `<form action={serverAction}>` でよい**（リセットされる対象が無い）。クライアント JS がゼロになる。前例は `src/app/(kiroku)/kiroku/select/page.tsx`（押された `<button name="..." value="...">` は FormData に入る）
 - **写真を扱うフォーム**: ファイル入力に `name` を付けない（原寸が FormData に入る経路を作らない）。`shrinkImageInBrowser` で縮小した File だけを `append` し、**合計バイト数をクライアントで検査**する（Vercel の 413 は Server Action に到達しないため捕捉できない）。共通定数は `src/lib/records.ts`（`"use server"` からは非 async を export できない）
 - **共通ヘルパ**: `src/lib/form.ts` の `toFieldErrors` / `nullIfEmpty`、`src/lib/revalidate.ts` の `revalidateRecords()` / `revalidateClasses()` を使う（各 actions.ts に再定義しない）。**`revalidatePath` の第2引数は `"layout"`**。既定の `"page"` はそのパスだけが対象で配下ルートを含まない
@@ -302,7 +304,7 @@ LaboCore（ラボコア）— シニア向けパソコン・スマホ教室「�
 
 ## デザインルール
 
-**フェーズ2以降の新規・刷新画面は DESIGN_v2.md が正典**。v1 ルールが適用されるのは、いまや **`LegacyPanel` の中にある設定配下の画面だけ**（27 で v2 化して消える）。1画面内の新旧混在は禁止・画面単位の混在は移行期間中のみ許容。
+**DESIGN_v2.md が全画面の正典**。27 で管理画面の刷新が終わり、**v1 デザインの画面はもう1つも無い**（v1 トークンと DESIGN.md の撤去は 28）。1画面内の新旧混在は禁止。
 
 ### 両世代共通の不変ルール
 
@@ -323,6 +325,6 @@ LaboCore（ラボコア）— シニア向けパソコン・スマホ教室「�
 - **`<pre>` には `font-jp` を明示する（20 で判明）。** Tailwind の preflight が `code, kbd, samp, pre` に `fontFamily.mono` を当てるため、指定しないと日本語が等幅フォールバックで崩れる。あわせて `whitespace-pre-wrap break-words`（375px で長い URL が溢れない）
 - **hover の動きは押せる要素だけに付ける（20 で判明）。** Tailwind 3.4 は `hoverOnlyWhenSupported` が既定オフ（v4 で既定になった）なので、`hover:-translate-y-*` はタップでも発火して貼り付く。カードなど押せない要素に付けない（DESIGN_v2 §6）
 
-### v1（DESIGN.md — `LegacyPanel` の中の未刷新画面の保守のみ）
+### v1（DESIGN.md — **適用画面はもう無い**。28 で撤去する）
 
 - アクセントは Action Blue `#0066cc` の1色のみ・セマンティックカラー禁止 / box-shadow・グラデーション禁止（階層は面の色替え+1px ヘアライン）/ 角丸 8/18/pill の3値 / ウェイト 400/600 のみ

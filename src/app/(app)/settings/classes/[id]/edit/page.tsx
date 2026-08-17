@@ -1,8 +1,12 @@
 import Link from "next/link";
 import { notFound } from "next/navigation";
 import { createClient } from "@/lib/supabase/server";
+import {
+  tricolorSmClass,
+  v2CanvasClass,
+} from "@/components/v2/styles";
 import { ClassForm } from "../../class-form";
-import { ConfirmDialog } from "@/components/confirm-dialog";
+import { ConfirmDialog } from "@/components/v2/confirm-dialog";
 import { updateClass, deactivateClass } from "../../actions";
 
 export default async function EditClassPage({
@@ -32,14 +36,15 @@ export default async function EditClassPage({
   );
 
   return (
-    <div className="flex max-w-[520px] flex-col gap-6">
-      <Link href="/settings/classes" className="text-[14px] text-ink-muted-48">
+    <div className={`${v2CanvasClass} flex max-w-[520px] flex-col gap-6`}>
+      <Link href="/settings/classes" className="text-[15px] text-sub">
         ‹ コマ管理
       </Link>
 
-      <h1 className="text-[28px] font-semibold tracking-[-0.02em] text-ink md:text-[34px]">
-        コマを編集
-      </h1>
+      <div className="flex items-center gap-3">
+        <h1 className="text-[23px] font-black tracking-[.02em]">コマを編集</h1>
+        <div className={`${tricolorSmClass} flex-none`} aria-hidden />
+      </div>
 
       <ClassForm
         action={updateClass}
@@ -55,8 +60,8 @@ export default async function EditClassPage({
         }}
       />
 
-      <div className="mt-6 flex flex-col gap-3 border-t border-divider-soft pt-6">
-        <p className="text-[14px] text-ink-muted-48">
+      <div className="mt-6 flex flex-col gap-3 border-t border-line pt-6">
+        <p className="text-[15px] text-sub">
           このコマを廃止すると一覧から外れます。過去の出欠・請求の履歴は残ります。
         </p>
         <ConfirmDialog

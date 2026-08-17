@@ -1,12 +1,15 @@
 "use client";
 
-import { useActionState } from "react";
+import { startTransition, useActionState, useRef } from "react";
 import {
   labelClass,
   inputClass,
+  selectClass,
   textareaClass,
   errorClass,
-} from "@/components/ui/form";
+  errorBandClass,
+} from "@/components/v2/form";
+import { sectionTitleClass, skyButtonClass } from "@/components/v2/styles";
 import type { StudentFormState } from "./actions";
 
 type Action = (
@@ -31,8 +34,6 @@ export type StudentDefaultValues = {
   note?: string | null;
 };
 
-const sectionTitleClass = "text-[21px] font-semibold text-ink";
-
 export function StudentForm({
   action,
   submitLabel,
@@ -45,10 +46,23 @@ export function StudentForm({
   defaultValues?: StudentDefaultValues;
 }) {
   const [state, formAction, pending] = useActionState(action, {});
+  const formRef = useRef<HTMLFormElement>(null);
   const d = defaultValues;
 
+  // action={formAction} は使わない（React 19 が返却時に非制御フィールドをリセットするため）。
+  // 送信ボタンは type="submit" のままにして onSubmit で止め、手動 dispatch する。
+  // こうすると required のネイティブ検証と Enter 送信がそのまま効く（24 のログイン画面と同じ形）。
   return (
-    <form action={formAction} className="flex flex-col gap-8">
+    <form
+      ref={formRef}
+      onSubmit={(e) => {
+        e.preventDefault();
+        const form = formRef.current;
+        if (!form) return;
+        startTransition(() => formAction(new FormData(form)));
+      }}
+      className="flex flex-col gap-8"
+    >
       {d?.id && <input type="hidden" name="id" value={d.id} />}
 
       {/* 基本情報（必須） */}
@@ -99,7 +113,7 @@ export function StudentForm({
             name="class_id"
             required
             defaultValue={d?.class_id ?? ""}
-            className={`${inputClass} pr-4`}
+            className={selectClass}
           >
             <option value="" disabled>
               選択してください
@@ -203,7 +217,7 @@ export function StudentForm({
             id="smartphone_os"
             name="smartphone_os"
             defaultValue={d?.smartphone_os ?? ""}
-            className={`${inputClass} pr-4`}
+            className={selectClass}
           >
             <option value="">未選択</option>
             <option value="android">Android</option>
@@ -268,12 +282,12 @@ export function StudentForm({
         />
       </section>
 
-      {state.formError && <p className={errorClass}>{state.formError}</p>}
+      {state.formError && <p className={errorBandClass}>{state.formError}</p>}
 
       <button
         type="submit"
         disabled={pending}
-        className="flex h-11 items-center justify-center self-start rounded-pill bg-primary px-8 text-[17px] font-semibold text-on-dark transition-transform active:scale-95 disabled:opacity-60"
+        className={`${skyButtonClass} self-start disabled:opacity-60`}
       >
         {pending ? "保存中…" : submitLabel}
       </button>
