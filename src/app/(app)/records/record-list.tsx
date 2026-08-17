@@ -20,6 +20,9 @@ export type RecordRow = {
 
 export type ClassFilter = { id: string; name: string; themeColor: string };
 
+// タブの短縮表示用。ループ内でリテラルを書くと毎評価で RegExp が作られる。
+const CLASS_SUFFIX_RE = /クラス$/;
+
 export function RecordList({
   rows: initialRows,
   classes,
@@ -62,7 +65,7 @@ export function RecordList({
         {classes.map((c) => (
           <FilterTab
             key={c.id}
-            label={c.name.replace(/クラス$/, "")}
+            label={c.name.replace(CLASS_SUFFIX_RE, "")}
             color={c.themeColor}
             active={filter === c.id}
             onClick={() => setFilter(c.id)}
@@ -80,7 +83,10 @@ export function RecordList({
             <li
               key={row.id}
               style={accentStyle(row.themeColor)}
-              className="rounded-20 border border-line bg-card px-4 py-4 shadow-elev-2"
+              // content-visibility: auto で画面外の行は描画をスキップする（記録は無制限に増える）。
+              // ⚠️ 子孫は行の境界でクリップされる。公開ボタンの glow は px-4 の内側に収まる程度
+              //    だが、行の端に寄る発光要素を足すときは外すこと。
+              className="rounded-20 border border-line bg-card px-4 py-4 shadow-elev-2 [contain-intrinsic-size:auto_150px] [content-visibility:auto]"
             >
               <div className="flex items-start justify-between gap-3">
                 <div className="min-w-0">

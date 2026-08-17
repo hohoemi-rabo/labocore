@@ -26,7 +26,13 @@ export function RecordCard({ record }: { record: KirokuRecord }) {
   const prompt = record.prompt?.trim();
 
   return (
-    <article className={`${cardClass} px-5 py-5`}>
+    // content-visibility: auto で画面外のカードは描画をスキップする（記録は無制限に増える）。
+    // intrinsic-size は画面外にいる間の高さの見積もり（一度描画されたら auto が実寸を覚える）。
+    // ⚠️ 子孫はカード境界でクリップされる（overflow-hidden と同じ）。いまの内容物は
+    //    グローが端に届かないことを確認済み。カード端に寄る発光要素を足すときは外すこと。
+    <article
+      className={`${cardClass} px-5 py-5 [contain-intrinsic-size:auto_480px] [content-visibility:auto]`}
+    >
       <span className={datePillClass}>
         {formatDateWithWeekday(record.lessonDate)}
       </span>
