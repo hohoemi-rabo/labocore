@@ -4,7 +4,7 @@ import { useRef } from "react";
 
 // 破壊的操作の確認ダイアログ（v2）。API は v1 の src/components/confirm-dialog.tsx と同じで、
 // 見た目だけ DESIGN_v2 に合わせたもの。ダーク面の画面では 1画面内の新旧混在を避けるため
-// こちらを使う（v1 版はチケット24 で撤去する）。
+// こちらを使う（v1 版は未刷新画面が 27 まで使うため、撤去は M3 完了＝チケット28）。
 //
 // 注意: 自前の <form> を持つので、**他の <form> の内側に置かない**（入れ子は不正）。
 export function ConfirmDialog({

@@ -7,11 +7,18 @@
 // DESIGN_v2 §5 の rem→px 換算表に従って変換する（html を 17px にしてはいけない）。
 
 // ── 面（キャンバス）─────────────────────────────────────────
-// v1 シェルの中でフルブリードのダーク面を敷く（管理画面 16〜18 用）。
-// `v2-canvas` は globals.css の body:has(.v2-canvas) が拾うマーカー。
-// min-h-screen は v1 の白い地色を見せないための暫定措置で、シェル刷新（24）後に外す。
-export const v2CanvasClass =
-  "v2-canvas -mx-4 -my-6 min-h-screen bg-ground bg-ambient px-4 py-6 font-jp text-[17px] leading-jp text-fg md:-mx-8 md:px-8";
+// 管理画面の共通シェル（`(app)/layout.tsx` のルート）。
+// `v2-canvas` は globals.css の body:has(.v2-canvas) が拾うマーカーで、
+// iOS のオーバースクロールで白がちらつくのを防ぐ。
+// ⚠️ ここにも子孫にも overflow-* / transform / filter を足さないこと
+//    （祖先に付くとヘッダーの position: sticky が黙って効かなくなる）。
+export const appShellClass =
+  "v2-canvas min-h-screen bg-ground bg-ambient font-jp text-fg";
+
+// 管理画面 v2 ページのキャンバス（16〜18・22・23 で使用）。
+// 24 でシェルがダークになったので、地色・アンビエント・フルブリードの打ち消しは
+// すべてシェル側（appShellClass）が持つ。ここはタイポグラフィだけを担う。
+export const v2CanvasClass = "font-jp text-[17px] leading-jp text-fg";
 
 // 入口画面（合言葉・クラスえらび）の全面キャンバス。アンビエントは強めを使う。
 export const entryCanvasClass =

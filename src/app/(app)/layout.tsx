@@ -1,30 +1,24 @@
-import Link from "next/link";
-import { Sidebar } from "@/components/nav/sidebar";
+import { AppHeader } from "@/components/nav/app-header";
 import { BottomTabs } from "@/components/nav/bottom-tabs";
+import { appShellClass } from "@/components/v2/styles";
 
-// 認証必須側の共通シェル。
-// PC: 純黒トップバー(44px) + 左サイドバー / モバイル: 下部タブ。
+// 認証必須側の共通シェル（24 で v2 = ダーク基調へ刷新）。
+// PC: sticky なガラスヘッダーにブランドとタブ / モバイル: ヘッダー + 下部タブ。
+//
+// ⚠️ このツリーに overflow-* / transform / filter を足さないこと。
+//    祖先に付くとヘッダーの position: sticky が黙って効かなくなる。
 export default function AppLayout({
   children,
 }: {
   children: React.ReactNode;
 }) {
   return (
-    <div className="min-h-screen bg-canvas">
-      {/* PC: 純黒トップバー（純黒はここだけ） */}
-      <header className="fixed inset-x-0 top-0 z-30 hidden h-11 items-center bg-surface-black px-6 md:flex">
-        <Link
-          href="/"
-          className="text-[12px] font-normal tracking-[-0.02em] text-on-dark"
-        >
-          LaboCore
-        </Link>
-      </header>
-
-      <Sidebar />
+    <div className={appShellClass}>
+      <AppHeader />
       <BottomTabs />
 
-      <main className="pb-24 md:ml-[220px] md:pb-8 md:pt-11">
+      {/* pb-24 は固定の下部タブに本文が隠れないための逃げ（モバイルのみ必要） */}
+      <main className="pb-24 md:pb-10">
         <div className="mx-auto max-w-[980px] px-4 py-6 md:px-8">{children}</div>
       </main>
     </div>

@@ -14,7 +14,7 @@ LaboCore（ラボコア）— シニア向けパソコン・スマホ教室「�
 
 **フェーズ1（チケット 01〜12）は実装完了し、本番運用中**。URL は https://labocore.vercel.app（Vercel・GitHub 連携で `main` push により自動デプロイ）。8画面（今日の出欠 / カレンダー / 月次集計 / 生徒・コマ・休講日管理 / 生徒詳細 / ログイン）が稼働し、Supabase スリープ防止の keepalive cron も稼働中（下記）。
 
-**フェーズ2「授業記録」はチケット 13〜28 に分割済み。13〜23 が実装完了し（M1 = 生徒向け一式が本番稼働・M2 = AI 下書きと他クラスコピーも完了）、次は 24 = M3（既存管理画面の v2 刷新）から着手する。** 現状の詳細は下記「フェーズ2の現状」、横断的な確定事項は「フェーズ2の実装方針」を参照。
+**フェーズ2「授業記録」はチケット 13〜28 に分割済み。13〜24 が実装完了し（M1 = 生徒向け一式が本番稼働 / M2 = AI 下書き・他クラスコピー / 24 = 管理画面の共通シェルとログインの v2 刷新）、次は 25（今日の出欠・カレンダーの刷新）から着手する。** 現状の詳細は下記「フェーズ2の現状」、横断的な確定事項は「フェーズ2の実装方針」を参照。
 
 **M1 の実装は完了し本番稼働中**（合言葉 → クラスえらび → クラスページ、PWA でホーム画面追加可）。実機確認（Safari / Chrome のホーム画面追加・絵文字・プロンプトのコピー）も済んでいる。
 
@@ -124,7 +124,7 @@ LaboCore（ラボコア）— シニア向けパソコン・スマホ教室「�
 - `src/app/(app)/attendance-board.tsx`（`useOptimistic`+`useTransition`+`useToast` の中心）/ `attendance-toggle.tsx`（出席｜欠席の2セグメント pill）/ `add-student.tsx`（別日来訪の追加）。`doneLabel`/`addLabel` で文言を差し替えて再利用する。
 - `src/app/(app)/summary/` — 月次集計。`setPayment` も同じ「redirect せず `{ error? }`・楽観的更新」パターン（`payments` を `onConflict: "student_id,target_month"` で upsert）。集計は `attendance_records` を月範囲取得し **JS 集約**（`unit_price_at_time` を合計＝スナップショット）。
 
-## フェーズ2の現状（13〜23 実装済み・24 から着手）
+## フェーズ2の現状（13〜24 実装済み・25 から着手）
 
 ### 追加済みの DB（14）
 
@@ -151,7 +151,9 @@ LaboCore（ラボコア）— シニア向けパソコン・スマホ教室「�
 | `src/lib/r2.ts` | `uploadImage` / `deleteImage` / `copyImage`（server-only） |
 | `src/lib/gemini.ts` | `generateRecordDraft` / `isGeminiConfigured` / `geminiModel` / `DEFAULT_GEMINI_MODEL` / `GeminiDraftError` / `SYSTEM_INSTRUCTION`（server-only・**モデル ID とプロンプトの単一の置き場**） |
 | `src/lib/format.ts` | 既存に加え `addDays`（20）/ `nextWeekdayOnOrAfter`（23・コピー先クラスの曜日に日付を合わせる）を追加 |
-| `src/components/v2/styles.ts` | `v2CanvasClass` / `entryCanvasClass` / `kirokuCanvasClass` / `entryBoxClass` / `glassCardClass` / `cardClass` / `accentCardClass` / `eyebrowClass`(+News/Prompt) / `sectionTitleClass` / `tricolorClass`(+Sm) / `accentButtonClass` / `skyButtonClass` / `entryButtonClass` / `copyButtonClass`(+Done) / `datePillClass` |
+| `src/components/legacy-panel.tsx` | `LegacyPanel`（24・**移行期間だけの白面ラッパー**。25〜27 で外し 28 で残骸ゼロを確認） |
+| `src/components/nav/app-header.tsx` | 管理画面の共通ヘッダー（24。sidebar.tsx を置き換え） |
+| `src/components/v2/styles.ts` | `appShellClass`(24) / `v2CanvasClass` / `entryCanvasClass` / `kirokuCanvasClass` / `entryBoxClass` / `glassCardClass` / `cardClass` / `accentCardClass` / `eyebrowClass`(+News/Prompt) / `sectionTitleClass` / `tricolorClass`(+Sm) / `accentButtonClass` / `skyButtonClass` / `entryButtonClass` / `copyButtonClass`(+Done) / `datePillClass` |
 | `src/components/v2/form.ts` | `labelClass` / `inputClass` / `selectClass` / `textareaClass` / `entryInputClass` / `errorClass` / `errorBandClass` |
 | `src/components/v2/confirm-dialog.tsx`・`toast.tsx` | v2 版（v1 版はダーク面で読めない。**v2 画面では必ず v2 版を import する**） |
 | `public/manifest.webmanifest` | 生徒向け PWA のマニフェスト（`(kiroku)/layout.tsx` の `metadata.manifest` から参照） |
@@ -159,7 +161,13 @@ LaboCore（ラボコア）— シニア向けパソコン・スマホ教室「�
 
 `scripts/verify-r2.mts`（`npm run verify:r2`）と `scripts/verify-gemini.mts`（`npm run verify:gemini`）は疎通確認ツール（常設）。どちらも `--conditions=react-server` で実行するため、**そこから import される lib は拡張子付きの相対 import で書く**（`@/` の別名は Node が引けない）。
 
-### 追加済みの画面（16〜22・すべて v2 デザイン）
+### 追加済みの画面（16〜24・すべて v2 デザイン）
+
+共通シェル・ログイン（24）:
+
+- `(app)/layout.tsx` — `appShellClass`（ダーク面 + アンビエント）+ `AppHeader`（sticky ガラス・PC はタブ入り）+ `BottomTabs`（モバイル）。**PC の左サイドバーと純黒トップバーは廃止**
+- `(auth)/login` — 入口ボックス文法（トリコロール → LABOCORE → 教室運営システム）。フォームは手動 dispatch
+- **未刷新のフェーズ1画面は `LegacyPanel` で白面に包んである**（今日=ページ内 / カレンダー・集計・設定=暫定 `layout.tsx`）
 
 管理側（16〜18・22）:
 
@@ -203,6 +211,15 @@ LaboCore（ラボコア）— シニア向けパソコン・スマホ教室「�
 - **重複（`UNIQUE(class_id, lesson_date)`）は写真を複製する前に見る。** 順番を逆にすると、数秒かけて複製してから「既にあります」と言うことになる。エラーは**ダイアログを閉じずに**出し、日付を直して再実行できるようにする
 - `v2/confirm-dialog.tsx` は入力欄を持てない（自前の `<form>` + Server Action 直結）ので、入力を伴う確認は別部品にする。前例が `copy-to-class-dialog.tsx`（22 の `ai-draft-panel.tsx` 内のダイアログと同じ理由）
 
+### 24（共通シェル刷新）で確立済み・触るときに壊さないこと
+
+- **ダークの地色・アンビエントはシェル（`appShellClass`）だけが持つ。** ページ側の `v2CanvasClass` はタイポグラフィだけになった。ページで `bg-ground` を敷き直さない（二重になる）
+- **⚠️ シェルのツリーに `overflow-*` / `transform` / `filter` を足さない。** 祖先に付くとヘッダーの `position: sticky` が**エラーも警告も無く**効かなくなる（生徒向けヘッダーと同じ落とし穴）
+- **`LegacyPanel` は移行期間だけの足場。** 未刷新のフェーズ1画面を白面で包んで読めるようにしている。25/26/27 で該当画面を v2 化したら、**カレンダー・集計・設定は `layout.tsx` ごと削除**、今日はページ内の `<LegacyPanel>` を外す。28 で `grep -r LegacyPanel src/` がゼロになることを確認する
+  - パディングは刷新前の共通シェルと同じ `px-4 py-6 md:px-8`。集計ヒーローの `-mx-4 -mt-6 md:-mx-8` が縁にぴたりと合うための値なので、勝手に変えない
+- **管理画面のアクセントはスカイ固定**（`bg-sky-fill` / `shadow-glow-sky`）。`--accent` を使うのはクラス文脈がある場所だけ（記録一覧のクラスタブなど）
+- v1 の `confirm-dialog.tsx` / `toast.tsx` / `ui/form.ts` は**まだ使われている**（`LegacyPanel` の中の画面が使う）。撤去は 28
+
 ### 19〜21（生徒向け一式）で確立済み・触るときに壊さないこと
 
 19〜21 で済んだこと: anon クライアントの共通化 / middleware の合言葉分岐 / `(kiroku)` layout と `force-dynamic` / クラスページ本体 / PWA 一式。
@@ -245,7 +262,7 @@ LaboCore（ラボコア）— シニア向けパソコン・スマホ教室「�
   - 削除は `deleteImage`（ベストエフォート・DB 操作を巻き添えにしない）、他クラスコピー（23）は `copyImage` で R2 オブジェクトごと複製する。URL からキーを取る処理は**ホスト非依存**（配信先を移しても既存 URL が壊れない）
   - 表示は **`next/image` ではなく素の `<img loading="lazy">`**（変換済みなので再最適化不要・Vercel の画像変換枠を使わない）。疎通確認は `npm run verify:r2`。env は README 参照（未設定でもアプリは起動し、写真操作時のみ失敗する）
 - **AI 下書き**（22 で実装済み）: Gemini Flash 系・無料枠運用。env `GEMINI_API_KEY` / `GEMINI_MODEL`（モデル ID のハードコード禁止・env で世代交代）。送信前に画像縮小（`AI_MAX_EDGE`=768）、出力は必ず人が確認して公開、API 障害時も手動入力で完結できること。個人情報を含む素材を AI に送らない。**詳細な申し送りは「22（AI 下書き）で確立済み・触るときに壊さないこと」を参照**
-- **M3 の段階刷新**: 画面単位で v2 へ置き換え・**1画面内の新旧混在は禁止**。シェル刷新（24）後、未刷新画面は暫定白面ラッパーで可読性を維持し 25〜27 で順次外す。28 で v1 トークン撤去・`DESIGN_v2.md` → `DESIGN.md` リネーム・SPEC.md / CLAUDE.md をフェーズ2 as-built に同期
+- **M3 の段階刷新**: 画面単位で v2 へ置き換え・**1画面内の新旧混在は禁止**。シェル刷新（24・完了）後、未刷新画面は `LegacyPanel`（暫定白面ラッパー）で可読性を維持し 25〜27 で順次外す。28 で v1 トークン撤去・`DESIGN_v2.md` → `DESIGN.md` リネーム・SPEC.md / CLAUDE.md をフェーズ2 as-built に同期
 
 ## Next.js 15 App Router ベストプラクティス
 
@@ -279,7 +296,7 @@ LaboCore（ラボコア）— シニア向けパソコン・スマホ教室「�
 
 ## デザインルール
 
-**フェーズ2以降の新規・刷新画面は DESIGN_v2.md が正典**。v1 ルールは **M3 完了までの未刷新フェーズ1画面を保守するときのみ**適用する（1画面内の新旧混在は禁止・画面単位の混在は移行期間中のみ許容）。
+**フェーズ2以降の新規・刷新画面は DESIGN_v2.md が正典**。v1 ルールが適用されるのは、いまや **`LegacyPanel` の中にある未刷新のフェーズ1画面だけ**（今日の出欠・カレンダー・月次集計・設定一式。25〜27 で順次 v2 化して消える）。1画面内の新旧混在は禁止・画面単位の混在は移行期間中のみ許容。
 
 ### 両世代共通の不変ルール
 
@@ -300,6 +317,6 @@ LaboCore（ラボコア）— シニア向けパソコン・スマホ教室「�
 - **`<pre>` には `font-jp` を明示する（20 で判明）。** Tailwind の preflight が `code, kbd, samp, pre` に `fontFamily.mono` を当てるため、指定しないと日本語が等幅フォールバックで崩れる。あわせて `whitespace-pre-wrap break-words`（375px で長い URL が溢れない）
 - **hover の動きは押せる要素だけに付ける（20 で判明）。** Tailwind 3.4 は `hoverOnlyWhenSupported` が既定オフ（v4 で既定になった）なので、`hover:-translate-y-*` はタップでも発火して貼り付く。カードなど押せない要素に付けない（DESIGN_v2 §6）
 
-### v1（DESIGN.md — 未刷新画面の保守のみ）
+### v1（DESIGN.md — `LegacyPanel` の中の未刷新画面の保守のみ）
 
 - アクセントは Action Blue `#0066cc` の1色のみ・セマンティックカラー禁止 / box-shadow・グラデーション禁止（階層は面の色替え+1px ヘアライン）/ 角丸 8/18/pill の3値 / ウェイト 400/600 のみ

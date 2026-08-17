@@ -4,7 +4,7 @@ import { useCallback, useRef, useState } from "react";
 
 // トースト（v2）。API は v1 の src/components/toast.tsx と同じで、見た目だけ DESIGN_v2 に合わせたもの。
 // v1 は ink 塗り（#1d1d1f）でダーク面（#0b0d12）に置くとほぼ見えないため、
-// v2 の画面ではこちらを使う（v1 版はチケット24 で撤去する）。
+// v2 の画面ではこちらを使う（v1 版は未刷新画面が 27 まで使うため、撤去は M3 完了＝チケット28）。
 //
 // 楽観的更新の失敗通知に使う（即時反映 → 失敗でロールバック + この通知）。
 export function useToast() {
