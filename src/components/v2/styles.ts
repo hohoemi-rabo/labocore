@@ -44,6 +44,15 @@ export const cardClass = "rounded-20 border border-line bg-card shadow-elev-2";
 export const accentCardClass =
   "rounded-20 border border-accent-line bg-card-accent shadow-elev-2";
 
+/**
+ * 大型ヒーロー（月次集計の請求額）。面は accentCardClass と同じで、影だけ
+ * DESIGN_v2 §4 の「大」を使う。
+ * ⚠️ `${accentCardClass} shadow-elev-3` と後ろから足さないこと
+ * （同じプロパティのユーティリティを2つ並べると、勝敗は Tailwind の出力順まかせになる）。
+ */
+export const heroCardClass =
+  "rounded-20 border border-accent-line bg-card-accent shadow-elev-3";
+
 // ── テキスト ───────────────────────────────────────────────
 // eyebrow（DESIGN_v2 §5）。色は役割で固定する
 const eyebrowBase = "text-[12px] font-bold uppercase tracking-[.22em]";

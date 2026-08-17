@@ -1,6 +1,11 @@
 import Link from "next/link";
 import { createClient } from "@/lib/supabase/server";
 import { todayJst, formatMonthJa, shiftMonth } from "@/lib/format";
+import {
+  heroCardClass,
+  tricolorSmClass,
+  v2CanvasClass,
+} from "@/components/v2/styles";
 import { PaymentTable, type SummaryRow } from "./payment-table";
 
 const MONTH_RE = /^\d{4}-\d{2}$/;
@@ -100,34 +105,32 @@ export default async function SummaryPage({
   }
 
   return (
-    <div>
-      {/* フルブリード ダークタイルのヒーロー */}
-      <section className="-mx-4 -mt-6 bg-surface-tile-1 px-5 py-10 text-center md:-mx-8 md:py-12">
+    <div className={v2CanvasClass}>
+      <div className="mb-6 flex items-center gap-3">
+        <h1 className="text-[23px] font-black tracking-[.02em]">月次集計</h1>
+        <div className={`${tricolorSmClass} flex-none`} aria-hidden />
+      </div>
+
+      {/* 請求額のヒーロー（DESIGN_v2 §8: アクセントの radial グローを持つ大型カード）。
+          巨大数値は <Yen> を流用せず手書きする（Yen は本文サイズ向けの muted 前提）。 */}
+      <section className={`${heroCardClass} px-5 py-10 text-center md:py-12`}>
         <div className="mx-auto flex max-w-[520px] items-center justify-between">
-          <Link
-            href={`/summary?month=${shiftMonth(month, -1)}`}
-            aria-label="前月"
-            className="flex h-11 w-11 items-center justify-center rounded-pill bg-on-dark text-[20px] text-ink transition-transform active:scale-95"
-          >
+          <MonthLink month={shiftMonth(month, -1)} label="前月">
             ‹
-          </Link>
-          <span className="text-[14px] text-body-muted tabular-nums">
+          </MonthLink>
+          <span className="text-[15px] font-bold text-sub tabular-nums">
             {formatMonthJa(month)}
           </span>
-          <Link
-            href={`/summary?month=${shiftMonth(month, 1)}`}
-            aria-label="翌月"
-            className="flex h-11 w-11 items-center justify-center rounded-pill bg-on-dark text-[20px] text-ink transition-transform active:scale-95"
-          >
+          <MonthLink month={shiftMonth(month, 1)} label="翌月">
             ›
-          </Link>
+          </MonthLink>
         </div>
 
-        <p className="mt-6 text-[40px] font-semibold tracking-[-0.02em] text-on-dark tabular-nums md:text-[56px]">
-          <span className="mr-1 text-[0.55em] text-body-muted">¥</span>
+        <p className="mt-6 text-[40px] font-black tracking-[-0.02em] text-fg tabular-nums md:text-[56px]">
+          <span className="mr-1 text-[0.55em] text-sub">¥</span>
           {totalAmount.toLocaleString("ja-JP")}
         </p>
-        <p className="mt-1 text-[14px] text-body-muted tabular-nums">
+        <p className="mt-1 text-[15px] text-sub tabular-nums">
           出席のべ {totalPresent}回
         </p>
       </section>
@@ -137,10 +140,30 @@ export default async function SummaryPage({
           <PaymentTable rows={rows} month={month} />
         </div>
       ) : (
-        <p className="mt-8 text-[17px] text-ink-muted-48">
+        <p className="mt-8 rounded-20 border border-dashed border-line px-4 py-10 text-center text-[17px] text-sub">
           この月の出欠記録はありません。
         </p>
       )}
     </div>
+  );
+}
+
+function MonthLink({
+  month,
+  label,
+  children,
+}: {
+  month: string;
+  label: string;
+  children: React.ReactNode;
+}) {
+  return (
+    <Link
+      href={`/summary?month=${month}`}
+      aria-label={label}
+      className="flex h-11 w-11 items-center justify-center rounded-pill border border-line text-[20px] text-fg transition active:scale-95"
+    >
+      {children}
+    </Link>
   );
 }

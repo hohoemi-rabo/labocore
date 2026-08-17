@@ -14,7 +14,7 @@ LaboCore（ラボコア）— シニア向けパソコン・スマホ教室「�
 
 **フェーズ1（チケット 01〜12）は実装完了し、本番運用中**。URL は https://labocore.vercel.app（Vercel・GitHub 連携で `main` push により自動デプロイ）。8画面（今日の出欠 / カレンダー / 月次集計 / 生徒・コマ・休講日管理 / 生徒詳細 / ログイン）が稼働し、Supabase スリープ防止の keepalive cron も稼働中（下記）。
 
-**フェーズ2「授業記録」はチケット 13〜28 に分割済み。13〜25 が実装完了し（M1 = 生徒向け一式が本番稼働 / M2 = AI 下書き・他クラスコピー / M3 は 24 シェル・ログイン、25 今日の出欠・カレンダーまで）、次は 26（月次集計の刷新）から着手する。** 現状の詳細は下記「フェーズ2の現状」、横断的な確定事項は「フェーズ2の実装方針」を参照。
+**フェーズ2「授業記録」はチケット 13〜28 に分割済み。13〜26 が実装完了し（M1 = 生徒向け一式が本番稼働 / M2 = AI 下書き・他クラスコピー / M3 は 24 シェル・ログイン、25 今日の出欠・カレンダー、26 月次集計まで）、次は 27（設定一式の刷新）から着手する。** 現状の詳細は下記「フェーズ2の現状」、横断的な確定事項は「フェーズ2の実装方針」を参照。
 
 **M1 の実装は完了し本番稼働中**（合言葉 → クラスえらび → クラスページ、PWA でホーム画面追加可）。実機確認（Safari / Chrome のホーム画面追加・絵文字・プロンプトのコピー）も済んでいる。
 
@@ -110,7 +110,7 @@ LaboCore（ラボコア）— シニア向けパソコン・スマホ教室「�
 ### 共有ユーティリティ / コンポーネント
 
 - `src/lib/format.ts` — `WEEKDAY_LABELS` / `formatTimeRange` / `formatYen` / `formatMonthJa` / `formatDateJa` / `todayJst`（JST の今日 `YYYY-MM-DD`）/ `weekdayOf`（日付の曜日番号・UTC 基準で tz 非依存）/ `formatDateWithWeekday`（「7月22日（水）」）/ `shiftMonth`（`YYYY-MM` を N ヶ月送り）。日付・月キーは必ずこれらを経由し、`new Date()` 直書きの tz 依存を持ち込まない。
-- `src/components/yen.tsx` — `<Yen amount>`。プロミネントな金額表示用（`¥` を一回り小さく muted・数字は `tabular-nums`）。素の文字列が要る箇所は `formatYen`。ダークタイル上の巨大数値は `¥`=body-muted・数字=白で手書きする（Yen は ink-muted 前提のため流用しない）。
+- `src/components/yen.tsx` — `<Yen amount>`。プロミネントな金額表示用（`¥` を一回り小さく muted・数字は `tabular-nums`）。素の文字列が要る箇所は `formatYen`。**`¥` の muted は色トークンではなく `opacity-60`**（26 で変更）。白面（設定配下・v1）とダーク面（集計・v2）の両方が使う部品なので、親の文字色に対する相対表現にしてある。**ヒーローの巨大数値には流用しない**（本文サイズ向けの比率なので、`¥`=sub・数字=fg で手書きする）。
 - `src/components/ui/form.ts` — フォーム入力の共有クラス（`labelClass` 14px/600・`inputClass` 44px pill+ring・`textareaClass`・`errorClass` は ink）。新規フォームはこれを使い、hex やスタイルを重複させない。
 - `src/components/confirm-dialog.tsx` — 破壊的操作の確認（論理削除で使用）。
 - `src/components/toast.tsx` — `useToast()` フック＋`<Toast message>`（ink 塗り pill・下部中央・3秒自動消去）。楽観的更新の失敗通知に使う。
@@ -124,7 +124,7 @@ LaboCore（ラボコア）— シニア向けパソコン・スマホ教室「�
 - `src/app/(app)/attendance-board.tsx`（`useOptimistic`+`useTransition`+`useToast` の中心）/ `attendance-toggle.tsx`（出席｜欠席の2セグメント pill）/ `add-student.tsx`（別日来訪の追加）。`doneLabel`/`addLabel` で文言を差し替えて再利用する。
 - `src/app/(app)/summary/` — 月次集計。`setPayment` も同じ「redirect せず `{ error? }`・楽観的更新」パターン（`payments` を `onConflict: "student_id,target_month"` で upsert）。集計は `attendance_records` を月範囲取得し **JS 集約**（`unit_price_at_time` を合計＝スナップショット）。
 
-## フェーズ2の現状（13〜25 実装済み・26 から着手）
+## フェーズ2の現状（13〜26 実装済み・27 から着手）
 
 ### 追加済みの DB（14）
 
@@ -168,10 +168,12 @@ LaboCore（ラボコア）— シニア向けパソコン・スマホ教室「�
 - `(app)/layout.tsx` — `appShellClass`（ダーク面 + アンビエント）+ `AppHeader`（sticky ガラス・PC はタブ入り）+ `BottomTabs`（モバイル）。**PC の左サイドバーと純黒トップバーは廃止**
 - `(auth)/login` — 入口ボックス文法（トリコロール → LABOCORE → 教室運営システム）。フォームは手動 dispatch
 
-刷新済みのフェーズ1画面（25）:
+刷新済みのフェーズ1画面（25・26）:
 
-- `/`（今日の出欠）・`/calendar` — 出欠まわりの共通部品（`attendance-board` / `attendance-toggle` / `add-student`）ごと v2 化。**データ取得・楽観的更新の作りは無変更**
-- **`LegacyPanel`（暫定白面）が残っているのは `/summary` と `/settings` 配下だけ**（26・27 で外す）
+- `/`（今日の出欠）・`/calendar`（25）— 出欠まわりの共通部品（`attendance-board` / `attendance-toggle` / `add-student`）ごと v2 化
+- `/summary`（26）— ヒーローを `heroCardClass`（アクセントの radial グロー + 影「大」）に。`<Yen>` の「¥」は白面・ダーク面の両対応のため `opacity-60` に変更
+- いずれも**データ取得・集計・楽観的更新の作りは無変更**（見た目だけ）
+- **`LegacyPanel`（暫定白面）が残っているのは `/settings` 配下だけ**（27 で外す）
 
 管理側（16〜18・22）:
 
@@ -219,8 +221,8 @@ LaboCore（ラボコア）— シニア向けパソコン・スマホ教室「�
 
 - **ダークの地色・アンビエントはシェル（`appShellClass`）だけが持つ。** ページ側の `v2CanvasClass` はタイポグラフィだけになった。ページで `bg-ground` を敷き直さない（二重になる）
 - **⚠️ シェルのツリーに `overflow-*` / `transform` / `filter` を足さない。** 祖先に付くとヘッダーの `position: sticky` が**エラーも警告も無く**効かなくなる（生徒向けヘッダーと同じ落とし穴）
-- **`LegacyPanel` は移行期間だけの足場。** 未刷新のフェーズ1画面を白面で包んで読めるようにしている。**25 で今日とカレンダーは外し済み**（`calendar/layout.tsx` は削除）。残りは 26 で `summary/layout.tsx`、27 で `settings/layout.tsx` を**ファイルごと削除**する。28 で `grep -r LegacyPanel src/` がゼロになることを確認する
-  - パディングは刷新前の共通シェルと同じ `px-4 py-6 md:px-8`。集計ヒーローの `-mx-4 -mt-6 md:-mx-8` が縁にぴたりと合うための値なので、勝手に変えない
+- **`LegacyPanel` は移行期間だけの足場。** 未刷新のフェーズ1画面を白面で包んで読めるようにしている。**25 で今日とカレンダー、26 で集計を外し済み**（`calendar/layout.tsx` / `summary/layout.tsx` は削除）。残りは 27 で `settings/layout.tsx` を**ファイルごと削除**する。28 で `grep -r LegacyPanel src/` がゼロになることを確認する
+  - パディングを刷新前の共通シェルと同じ `px-4 py-6 md:px-8` にしてあるのは集計ヒーローのフルブリードに合わせるためだったが、**26 でそのヒーローがカードになったのでこの制約は解けた**（設定配下にフルブリード要素は無い）
 - **管理画面のアクセントはスカイ固定**（`bg-sky-fill` / `shadow-glow-sky`）。`--accent` を使うのはクラス文脈がある場所だけ（記録一覧のクラスタブなど）
 - v1 の `confirm-dialog.tsx` / `toast.tsx` / `ui/form.ts` は**まだ使われている**（`LegacyPanel` の中の画面が使う）。撤去は 28
 
@@ -300,7 +302,7 @@ LaboCore（ラボコア）— シニア向けパソコン・スマホ教室「�
 
 ## デザインルール
 
-**フェーズ2以降の新規・刷新画面は DESIGN_v2.md が正典**。v1 ルールが適用されるのは、いまや **`LegacyPanel` の中にある未刷新のフェーズ1画面だけ**（月次集計・設定一式。26・27 で v2 化して消える）。1画面内の新旧混在は禁止・画面単位の混在は移行期間中のみ許容。
+**フェーズ2以降の新規・刷新画面は DESIGN_v2.md が正典**。v1 ルールが適用されるのは、いまや **`LegacyPanel` の中にある設定配下の画面だけ**（27 で v2 化して消える）。1画面内の新旧混在は禁止・画面単位の混在は移行期間中のみ許容。
 
 ### 両世代共通の不変ルール
 

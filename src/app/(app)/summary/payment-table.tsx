@@ -1,7 +1,9 @@
 "use client";
 
 import { useOptimistic, useTransition } from "react";
-import { useToast, Toast } from "@/components/toast";
+// v2（ダーク面）用のトースト。v1 版は ink 塗りでダーク面に溶けて読めない。
+import { useToast, Toast } from "@/components/v2/toast";
+import { cardClass } from "@/components/v2/styles";
 import { Yen } from "@/components/yen";
 import { setPayment } from "./payment-actions";
 
@@ -66,37 +68,38 @@ export function PaymentTable({
   }
 
   return (
-    <div className="overflow-hidden rounded-lg border border-hairline bg-canvas">
+    // ⚠️ overflow-hidden を付けない（支払済トグルの色グローが切れる）。
+    <div className={cardClass}>
       {rows.map((row, i) => (
         <div
           key={row.studentId}
-          className={`flex min-h-[64px] items-center justify-between gap-4 px-5 ${
-            i > 0 ? "border-t border-divider-soft" : ""
+          className={`flex min-h-[64px] items-center justify-between gap-4 px-4 py-2 md:px-5 ${
+            i > 0 ? "border-t border-line" : ""
           }`}
         >
           <div className="flex min-w-0 flex-col">
-            <span className="truncate text-[17px] font-semibold text-ink">
+            <span className="truncate text-[17px] font-bold text-fg">
               {row.name}
             </span>
-            <span className="text-[14px] text-ink-muted-48 tabular-nums">
+            <span className="text-[14px] text-sub tabular-nums">
               出席 {row.present}回 ・ 欠席 {row.absent}回
             </span>
           </div>
 
-          <div className="flex shrink-0 items-center gap-4">
+          <div className="flex shrink-0 items-center gap-3">
             <Yen
               amount={row.amount}
-              className="w-[88px] text-right text-[17px] font-semibold text-ink"
+              className="w-[88px] text-right text-[17px] font-bold text-fg"
             />
             <button
               type="button"
               onClick={() => togglePaid(row)}
               disabled={isPending}
               aria-pressed={row.isPaid}
-              className={`flex min-h-[44px] items-center justify-center gap-1 rounded-pill px-4 text-[15px] font-semibold transition-transform active:scale-95 disabled:opacity-60 ${
+              className={`flex min-h-[44px] items-center justify-center gap-1.5 rounded-pill px-4 text-[15px] font-bold transition active:scale-95 disabled:opacity-60 ${
                 row.isPaid
-                  ? "bg-primary text-on-dark"
-                  : "border border-hairline text-ink-muted-48"
+                  ? "bg-sky-fill text-white shadow-glow-sky"
+                  : "border border-line text-sub"
               }`}
             >
               {row.isPaid && <CheckIcon />}
