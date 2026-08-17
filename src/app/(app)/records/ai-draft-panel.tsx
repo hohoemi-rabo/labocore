@@ -3,6 +3,7 @@
 import { useRef, useState, useTransition } from "react";
 import { errorClass, labelClass, textareaClass } from "@/components/v2/form";
 import { skyButtonClass } from "@/components/v2/styles";
+import { MAX_PHOTOS } from "@/lib/records";
 import { generateDraft } from "./actions";
 import type { PickedPhoto } from "./photo-picker";
 
@@ -23,6 +24,7 @@ export function AiDraftPanel({
   recordId,
   picked,
   keptUrls,
+  photosBusy,
   currentTheme,
   currentMemo,
   onApply,
@@ -34,6 +36,12 @@ export function AiDraftPanel({
   recordId?: string;
   picked: PickedPhoto[];
   keptUrls: string[];
+  /**
+   * 写真がまだ送れる状態にないか（ブラウザ側で縮小中・合計サイズ超過）。
+   * **true のあいだは生成させない。** 縮小が終わるまで picked には入らないので、
+   * ここで押せてしまうと「写真を選んだのに読んでくれない」が起きる。
+   */
+  photosBusy: boolean;
   /** 上書き確認を出すかの判断に使う現在値 */
   currentTheme: string;
   currentMemo: string;
@@ -44,6 +52,9 @@ export function AiDraftPanel({
   const [pending, startTransition] = useTransition();
   const [draft, setDraft] = useState<RecordDraft | null>(null);
   const dialogRef = useRef<HTMLDialogElement>(null);
+
+  // サーバー側でも MAX_PHOTOS で切るので、表示もそれに合わせる。
+  const photoCount = Math.min(keptUrls.length + picked.length, MAX_PHOTOS);
 
   function run() {
     const formData = new FormData();
@@ -105,15 +116,26 @@ export function AiDraftPanel({
         </p>
       </div>
 
-      <div>
+      <div className="flex flex-col gap-2">
         <button
           type="button"
-          disabled={!enabled || pending || note.trim() === ""}
+          disabled={!enabled || pending || photosBusy || note.trim() === ""}
           onClick={run}
           className={`${skyButtonClass} disabled:opacity-60`}
         >
           {pending ? "作っています…" : "下書きを作ってもらう"}
         </button>
+
+        {/* 何が AI に渡るのかをその場で見せる（写真が読まれたか迷わないように） */}
+        {enabled && (
+          <p className="text-[15px] leading-jp text-sub">
+            {photosBusy
+              ? "写真を読み込んでいます。終わるまでお待ちください。"
+              : photoCount > 0
+                ? `上の写真${photoCount}枚もいっしょに見て書きます。`
+                : "写真がないので、メモだけから書きます。"}
+          </p>
+        )}
       </div>
 
       {!enabled && (

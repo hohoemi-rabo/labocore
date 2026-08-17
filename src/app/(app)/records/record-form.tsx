@@ -196,6 +196,7 @@ export function RecordForm({
         recordId={defaultValues?.id}
         picked={picked}
         keptUrls={keptUrls}
+        photosBusy={photosBlocking}
         currentTheme={theme}
         currentMemo={memo}
         onApply={(draft) => {

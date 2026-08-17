@@ -190,6 +190,7 @@ LaboCore（ラボコア）— シニア向けパソコン・スマホ教室「�
 - **API キー未設定でもボタン以外は完全に動く。** `isGeminiConfigured()` をページで読み `aiEnabled` として渡し、false のときはボタンを無効化して理由を出す（押しても無反応、にしない）
 - **テーマ・メモは制御コンポーネント**（AI の結果を流し込むため）。**それ以外は非制御＋手動 dispatch のまま**（「v2 画面のフォーム」の方針は変えていない）。走り書きメモの textarea には **`name` を付けない**（付けると保存時の `new FormData(form)` に混ざる）
 - 置き換え確認は `ai-draft-panel.tsx` 内の `<dialog>`。**`v2/confirm-dialog.tsx` は使えない**（自前の `<form>` を持つので `RecordForm` の `<form>` に入れ子にできず、プログラムから開く用途にも合わない）
+- **⚠️ 写真の縮小中は生成させない**（`photosBusy` = `PhotoPicker` の `onBlockingChange`）。縮小が終わるまで `picked` に入らないため、押せてしまうと「写真を選んだのに読んでくれない」が起きる。何枚渡すかはボタンの下に常に表示している
 - **`npm run verify:gemini` でブラウザなしに通しで確認できる。** モデルを差し替えたとき・「AI下書きが失敗する」ときはまずこれを叩く
 - 実測: `gemini-3.5-flash-lite` + 768px 画像1枚で約2秒・1,434 トークン（`/records` の `maxDuration = 60` に対して十分内側）
 
